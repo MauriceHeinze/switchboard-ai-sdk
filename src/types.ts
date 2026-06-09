@@ -33,14 +33,19 @@ export type ChatInput = {
   }>;
 };
 
+export type ToolInvocationOptions = {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+};
+
 export type ConnectedTool = {
   id: ProviderId;
   name: string;
   type: ToolType;
   capabilities: Capability[];
-  health(): Promise<boolean>;
-  run?(input: AgentRunInput): Promise<unknown>;
-  chat?(input: ChatInput): Promise<unknown>;
+  health(options?: ToolInvocationOptions): Promise<boolean>;
+  run?(input: AgentRunInput, options?: ToolInvocationOptions): Promise<unknown>;
+  chat?(input: ChatInput, options?: ToolInvocationOptions): Promise<unknown>;
 };
 
 export type ConnectByCapabilityOptions = {

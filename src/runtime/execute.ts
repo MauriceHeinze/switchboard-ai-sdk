@@ -46,6 +46,8 @@ export async function executeCommand(
       }
     );
 
+    child.stdin?.end();
+
     const abortHandler = () => {
       if (settled) {
         return;
