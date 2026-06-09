@@ -1,0 +1,28 @@
+{
+  "name": "switchboard-ai",
+  "version": "0.1.0",
+  "description": "Connect your app to local AI tools.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "keywords": [
+    "ai",
+    "electron",
+    "codex",
+    "claude-code",
+    "ollama",
+    "local-first"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
