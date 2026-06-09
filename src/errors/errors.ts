@@ -32,3 +32,10 @@ export class ProviderExecutionError extends Error {
     this.name = "ProviderExecutionError";
   }
 }
+
+export class TimeoutError extends Error {
+  constructor(message = "The operation timed out.") {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}

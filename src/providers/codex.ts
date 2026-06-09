@@ -9,11 +9,14 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   type: "agent",
   capabilities: ["agent-task", "code-analysis", "code-edit", "health-check"]
 };
+const DISCOVERY_TIMEOUT_MS = 5_000;
 
 export const codexProvider: ProviderDefinition = {
   async discover() {
     try {
-      const { stdout } = await executeCommand("codex", ["--version"]);
+      const { stdout } = await executeCommand("codex", ["--version"], {
+        timeoutMs: DISCOVERY_TIMEOUT_MS
+      });
 
       return {
         ...TOOL,

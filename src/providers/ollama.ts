@@ -9,11 +9,14 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   type: "runtime",
   capabilities: ["chat", "completion", "model-list", "health-check"]
 };
+const DISCOVERY_TIMEOUT_MS = 5_000;
 
 export const ollamaProvider: ProviderDefinition = {
   async discover() {
     try {
-      const { stdout } = await executeCommand("ollama", ["--version"]);
+      const { stdout } = await executeCommand("ollama", ["--version"], {
+        timeoutMs: DISCOVERY_TIMEOUT_MS
+      });
 
       return {
         ...TOOL,
