@@ -109,7 +109,7 @@ async function resolveOllamaModel(
     return process.env.SWITCHBOARD_OLLAMA_MODEL;
   }
 
-  const discoveredDefaultModel = tool.metadata?.defaultModel;
+  const discoveredDefaultModel = tool.defaultModel;
 
   if (typeof discoveredDefaultModel === "string") {
     return discoveredDefaultModel;
@@ -141,9 +141,10 @@ export const ollamaProvider: ProviderDefinition = {
           ...TOOL,
           available: true,
           version: stdout || undefined,
+          models: availableModels,
+          defaultModel: availableModels[0],
           metadata: {
-            models: availableModels,
-            defaultModel: availableModels[0]
+            modelSource: "discovered"
           }
         };
       } catch (error) {
@@ -180,6 +181,8 @@ export const ollamaProvider: ProviderDefinition = {
       name: tool.name,
       type: tool.type,
       capabilities: tool.capabilities,
+      models: tool.models,
+      defaultModel: tool.defaultModel,
       async health(options: ToolInvocationOptions = {}) {
         const models = await listOllamaModels(options.signal);
         return models.length > 0;

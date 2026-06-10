@@ -19,6 +19,8 @@ export type DiscoveredTool = {
   available: boolean;
   version?: string;
   capabilities: Capability[];
+  models?: string[];
+  defaultModel?: string;
   metadata?: Record<string, unknown>;
 };
 
@@ -43,6 +45,8 @@ export type ConnectedTool = {
   name: string;
   type: ToolType;
   capabilities: Capability[];
+  models?: string[];
+  defaultModel?: string;
   health(options?: ToolInvocationOptions): Promise<boolean>;
   run?(input: AgentRunInput, options?: ToolInvocationOptions): Promise<unknown>;
   chat?(input: ChatInput, options?: ToolInvocationOptions): Promise<unknown>;
