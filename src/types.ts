@@ -1,4 +1,4 @@
-export type ProviderId = "claude-code" | "codex" | "ollama";
+export type ProviderId = "claude-code" | "codex" | "ollama" | "opencode";
 
 export type ToolType = "agent" | "runtime" | "server" | "unknown";
 

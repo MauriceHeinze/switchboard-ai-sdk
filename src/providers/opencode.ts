@@ -15,67 +15,51 @@ import type {
 import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
-  id: "codex",
-  name: "Codex",
+  id: "opencode",
+  name: "OpenCode",
   type: "agent",
   capabilities: ["agent-task", "code-analysis", "code-edit", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
-const ALLOWED_SANDBOX_MODES = new Set([
-  "read-only",
-  "workspace-write",
-  "danger-full-access"
-]);
 
-type CodexExecEvent = {
+type OpenCodeEvent = {
   type?: string;
-  item?: {
+  timestamp?: number;
+  sessionID?: string;
+  part?: {
     type?: string;
     text?: string;
+    time?: {
+      start?: number;
+      end?: number;
+    };
   };
-  usage?: Record<string, number>;
+  error?: {
+    name?: string;
+    data?: {
+      message?: string;
+    };
+  };
 };
 
-function getCodexSandboxMode(): string {
-  const configuredMode = process.env.SWITCHBOARD_CODEX_SANDBOX ?? "read-only";
-
-  return ALLOWED_SANDBOX_MODES.has(configuredMode)
-    ? configuredMode
-    : "read-only";
-}
-
-function getConfiguredCodexModel(): string | undefined {
-  return getConfiguredModel("SWITCHBOARD_CODEX_MODEL");
+function getConfiguredOpenCodeModel(): string | undefined {
+  return getConfiguredModel("SWITCHBOARD_OPENCODE_MODEL");
 }
 
 async function listAvailableModels(): Promise<string[] | undefined> {
-  return getConfiguredModelInfo("SWITCHBOARD_CODEX_MODEL").models;
+  return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
 }
 
-function buildCodexExecArgs(input: AgentRunInput): string[] {
-  const args = [
-    "exec",
-    "--json",
-    "--color",
-    "never",
-    "--ephemeral",
-    "--skip-git-repo-check",
-    "--ignore-rules",
-    "--sandbox",
-    getCodexSandboxMode()
-  ];
+function buildOpenCodeArgs(input: AgentRunInput): string[] {
+  const args = ["run", "--format", "json"];
 
-  if (process.env.SWITCHBOARD_CODEX_IGNORE_USER_CONFIG === "true") {
-    args.push("--ignore-user-config");
-  }
-
-  const configuredModel = getConfiguredCodexModel();
+  const configuredModel = getConfiguredOpenCodeModel();
 
   if (configuredModel) {
     args.push("--model", configuredModel);
   }
 
-  args.push(input.prompt);
+  args.push("--", input.prompt);
 
   return args;
 }
@@ -106,70 +90,79 @@ function getProcessStderr(error: unknown): string {
   return "";
 }
 
-function isCodexAuthError(stderr: string): boolean {
-  return /auth|login|api[_ -]?key/i.test(stderr);
+function isOpenCodeAuthError(stderr: string): boolean {
+  return /auth|login|api[_ -]?key|unauthorized|not logged in/i.test(stderr);
 }
 
-export function parseCodexExecJsonOutput(stdout: string): {
+export function parseOpenCodeJsonOutput(stdout: string): {
   message: {
     role: "assistant";
     content: string;
   };
-  usage?: Record<string, number>;
 } {
   const events = stdout
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((line) => JSON.parse(line) as CodexExecEvent);
+    .map((line) => JSON.parse(line) as OpenCodeEvent);
 
-  const messageEvent = [...events]
-    .reverse()
-    .find(
-      (event) =>
-        event.type === "item.completed" &&
-        event.item?.type === "agent_message" &&
-        typeof event.item.text === "string"
-    );
+  const errorEvent = events.find(
+    (event) => event.type === "error" && event.error
+  );
 
-  if (!messageEvent?.item?.text) {
+  if (errorEvent?.error) {
+    const errorMessage =
+      errorEvent.error.data?.message ??
+      errorEvent.error.name ??
+      "unknown error";
     throw new ProviderExecutionError(
       TOOL.id,
-      "Codex did not return a final agent message."
+      `OpenCode returned an error: ${errorMessage}`
     );
   }
 
-  const usageEvent = [...events]
-    .reverse()
-    .find((event) => event.type === "turn.completed" && event.usage);
+  const textEvents = events.filter(
+    (event) =>
+      event.type === "text" &&
+      event.part?.type === "text" &&
+      typeof event.part.text === "string" &&
+      event.part.time?.end !== undefined
+  );
+
+  if (textEvents.length === 0) {
+    throw new ProviderExecutionError(
+      TOOL.id,
+      "OpenCode did not return a text response."
+    );
+  }
+
+  const content = textEvents
+    .map((event) => event.part!.text!)
+    .join("\n\n");
 
   return {
     message: {
       role: "assistant",
-      content: messageEvent.item.text
-    },
-    usage: usageEvent?.usage
+      content
+    }
   };
 }
 
-export const codexProvider: ProviderDefinition = {
+export const opencodeProvider: ProviderDefinition = {
   async discover() {
     try {
-      const { stdout } = await executeCommand("codex", ["--version"], {
+      const { stdout } = await executeCommand("opencode", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
       const availableModels = await listAvailableModels();
-      const configuredModel = getConfiguredCodexModel();
+      const configuredModel = getConfiguredOpenCodeModel();
 
       return {
         ...TOOL,
         available: true,
         version: stdout || undefined,
         models: availableModels,
-        defaultModel: configuredModel,
-        metadata: {
-          sandboxMode: getCodexSandboxMode()
-        }
+        defaultModel: configuredModel
       };
     } catch {
       return {
@@ -199,32 +192,36 @@ export const codexProvider: ProviderDefinition = {
       async run(input, options: ToolInvocationOptions = {}) {
         try {
           const { stdout } = await executeCommand(
-            "codex",
-            buildCodexExecArgs(input),
+            "opencode",
+            buildOpenCodeArgs(input),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs
             }
           );
 
-          return parseCodexExecJsonOutput(stdout);
+          return parseOpenCodeJsonOutput(stdout);
         } catch (error) {
           if (error instanceof TimeoutError) {
             throw error;
           }
 
+          if (error instanceof ProviderExecutionError) {
+            throw error;
+          }
+
           const stderr = getProcessStderr(error);
 
-          if (isCodexAuthError(stderr)) {
+          if (isOpenCodeAuthError(stderr)) {
             throw new ToolAuthError(
               tool.id,
-              "Codex requires authentication before it can handle requests."
+              "OpenCode requires authentication before it can handle requests."
             );
           }
 
           throw new ProviderExecutionError(
             tool.id,
-            `Codex execution failed: ${toErrorMessage(error)}`
+            `OpenCode execution failed: ${toErrorMessage(error)}`
           );
         }
       }

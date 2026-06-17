@@ -105,7 +105,7 @@ test("GET /discover requires auth and returns tools", async () => {
     const body = await response.json();
 
     assert.equal(response.status, 200);
-    assert.equal(body.tools.length, 3);
+    assert.equal(body.tools.length, 4);
     assert.ok(
       body.tools.some(
         (tool) =>

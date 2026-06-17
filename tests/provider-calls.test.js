@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseClaudeCodeJsonOutput } from "../dist/providers/claude-code.js";
 import { parseCodexExecJsonOutput } from "../dist/providers/codex.js";
+import { parseOpenCodeJsonOutput } from "../dist/providers/opencode.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
 
 test("parseCodexExecJsonOutput extracts the final agent message and usage", () => {
@@ -74,6 +75,105 @@ test("parseClaudeCodeJsonOutput throws on empty output", () => {
   assert.throws(
     () => parseClaudeCodeJsonOutput(""),
     /did not return any output/
+  );
+});
+
+test("parseOpenCodeJsonOutput extracts text events", () => {
+  const result = parseOpenCodeJsonOutput([
+    JSON.stringify({
+      type: "step_start",
+      timestamp: 1718600000000,
+      sessionID: "sess_abc",
+      part: { type: "step-start" }
+    }),
+    JSON.stringify({
+      type: "text",
+      timestamp: 1718600001000,
+      sessionID: "sess_abc",
+      part: {
+        type: "text",
+        text: "Hello from OpenCode",
+        time: { start: 1718600000000, end: 1718600001000 }
+      }
+    }),
+    JSON.stringify({
+      type: "step_finish",
+      timestamp: 1718600002000,
+      sessionID: "sess_abc",
+      part: { type: "step-finish" }
+    })
+  ].join("\n"));
+
+  assert.deepEqual(result, {
+    message: {
+      role: "assistant",
+      content: "Hello from OpenCode"
+    }
+  });
+});
+
+test("parseOpenCodeJsonOutput concatenates multiple text events", () => {
+  const result = parseOpenCodeJsonOutput([
+    JSON.stringify({
+      type: "text",
+      timestamp: 1718600001000,
+      sessionID: "sess_abc",
+      part: {
+        type: "text",
+        text: "First part",
+        time: { start: 1718600000000, end: 1718600001000 }
+      }
+    }),
+    JSON.stringify({
+      type: "text",
+      timestamp: 1718600003000,
+      sessionID: "sess_abc",
+      part: {
+        type: "text",
+        text: "Second part",
+        time: { start: 1718600002000, end: 1718600003000 }
+      }
+    })
+  ].join("\n"));
+
+  assert.deepEqual(result, {
+    message: {
+      role: "assistant",
+      content: "First part\n\nSecond part"
+    }
+  });
+});
+
+test("parseOpenCodeJsonOutput throws on error event", () => {
+  assert.throws(
+    () =>
+      parseOpenCodeJsonOutput(
+        JSON.stringify({
+          type: "error",
+          timestamp: 1718600000000,
+          sessionID: "sess_abc",
+          error: {
+            name: "AuthError",
+            data: { message: "API key missing" }
+          }
+        })
+      ),
+    /OpenCode returned an error: API key missing/
+  );
+});
+
+test("parseOpenCodeJsonOutput throws when no text events", () => {
+  assert.throws(
+    () =>
+      parseOpenCodeJsonOutput(
+        JSON.stringify({
+          type: "step_start",
+          timestamp: 1718600000000,
+          sessionID: "sess_abc",
+          part: { type: "step-start" }
+        })
+      ),
+    /did not return a text response/
   );
 });
 

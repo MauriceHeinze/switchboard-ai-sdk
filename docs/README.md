@@ -25,6 +25,6 @@ for (const tool of tools) {
 
 Current behavior:
 
-- Ollama returns installed local models and the first discovered model as `defaultModel`.
-- Codex returns the configured `SWITCHBOARD_CODEX_MODEL` as both `models` and `defaultModel` when it is set.
-- Providers that cannot enumerate models leave these fields undefined.
+- Ollama returns installed local models and uses `SWITCHBOARD_OLLAMA_MODEL` as `defaultModel` when it is set; otherwise it falls back to the first discovered model.
+- Codex, Claude Code, and OpenCode currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
+- Providers without a stable machine-readable model listing mechanism leave `models` undefined when nothing is configured.
