@@ -1,0 +1,166 @@
+import { connect } from "../connect.js";
+import { discover } from "../discovery/discover.js";
+import {
+  ProviderExecutionError,
+  TimeoutError,
+  ToolAuthError,
+  ToolNotFoundError,
+  ToolUnavailableError
+} from "../errors/errors.js";
+import type { ChatInput, ConnectedTool, DiscoveredTool, ProviderId } from "../types.js";
+import type { CallToolOptions, CallToolRequest, CallToolResponse, ToolHealthResult, ToolOperationOptions } from "./types.js";
+
+function nowIsoString(): string {
+  return new Date().toISOString();
+}
+
+function isChatInput(input: CallToolRequest): input is ChatInput {
+  return "messages" in input;
+}
+
+async function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs?: number
+): Promise<T> {
+  if (timeoutMs === undefined) {
+    return operation;
+  }
+
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new TimeoutError());
+    }, timeoutMs);
+
+    operation.then(
+      (result) => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function getDiscoveredTool(toolId: ProviderId): Promise<DiscoveredTool> {
+  const tools = await discover();
+  const tool = tools.find((candidate) => candidate.id === toolId);
+
+  if (!tool) {
+    throw new ToolNotFoundError(toolId);
+  }
+
+  return tool;
+}
+
+export async function discoverTools() {
+  return discover();
+}
+
+export async function checkToolHealth(
+  toolId: ProviderId,
+  options: ToolOperationOptions = {}
+): Promise<ToolHealthResult> {
+  const startedAt = Date.now();
+  const checkedAt = nowIsoString();
+
+  try {
+    const discoveredTool = await withTimeout(getDiscoveredTool(toolId), options.timeoutMs);
+
+    if (!discoveredTool.available) {
+      return {
+        toolId,
+        status: "unavailable",
+        available: false,
+        version: discoveredTool.version,
+        reason:
+          typeof discoveredTool.metadata?.reason === "string"
+            ? discoveredTool.metadata.reason
+            : `${discoveredTool.name} is not available.`,
+        latencyMs: Date.now() - startedAt,
+        checkedAt
+      };
+    }
+
+    const tool = await withTimeout(connect(toolId), options.timeoutMs);
+    const healthy = await withTimeout(tool.health(), options.timeoutMs);
+
+    return {
+      toolId,
+      status: healthy ? "healthy" : "error",
+      available: healthy,
+      version: discoveredTool.version,
+      reason: healthy ? undefined : `${discoveredTool.name} reported an unhealthy state.`,
+      latencyMs: Date.now() - startedAt,
+      checkedAt
+    };
+  } catch (error) {
+    if (error instanceof TimeoutError) {
+      return {
+        toolId,
+        status: "timeout",
+        available: false,
+        reason: error.message,
+        latencyMs: Date.now() - startedAt,
+        checkedAt
+      };
+    }
+
+    if (error instanceof ToolUnavailableError || error instanceof ToolAuthError) {
+      return {
+        toolId,
+        status: "unavailable",
+        available: false,
+        reason: error.message,
+        latencyMs: Date.now() - startedAt,
+        checkedAt
+      };
+    }
+
+    throw error;
+  }
+}
+
+function assertToolSupportsRequest(tool: ConnectedTool, input: CallToolRequest): void {
+  if (isChatInput(input) && !tool.chat) {
+    throw new ProviderExecutionError(tool.id, `${tool.name} does not support chat calls.`);
+  }
+
+  if (!isChatInput(input) && !tool.run) {
+    throw new ProviderExecutionError(tool.id, `${tool.name} does not support agent runs.`);
+  }
+}
+
+export async function callTool(
+  toolId: ProviderId,
+  input: CallToolRequest,
+  options: CallToolOptions = {}
+): Promise<CallToolResponse> {
+  const startedAt = Date.now();
+  const discoveredTool = await withTimeout(getDiscoveredTool(toolId), options.timeoutMs);
+
+  if (!discoveredTool.available) {
+    throw new ToolUnavailableError(
+      toolId,
+      typeof discoveredTool.metadata?.reason === "string"
+        ? discoveredTool.metadata.reason
+        : `${discoveredTool.name} is not available.`
+    );
+  }
+
+  const tool = await withTimeout(connect(toolId), options.timeoutMs);
+  assertToolSupportsRequest(tool, input);
+
+  const result = isChatInput(input)
+    ? await withTimeout(tool.chat!(input), options.timeoutMs)
+    : await withTimeout(tool.run!(input), options.timeoutMs);
+
+  return {
+    toolId,
+    type: tool.type,
+    result,
+    latencyMs: Date.now() - startedAt
+  };
+}
