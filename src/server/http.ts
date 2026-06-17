@@ -11,6 +11,7 @@ import {
 import type { ChatInput, ProviderId } from "../types.js";
 import type {
   CallToolRequest,
+  DiscoverToolSummary,
   DiscoverResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions
@@ -55,6 +56,24 @@ function writeError(
       message
     }
   } satisfies JsonError);
+}
+
+function toDiscoverToolSummary(tool: {
+  id: string;
+  name: string;
+  available: boolean;
+  models?: string[];
+}): DiscoverToolSummary {
+  return tool.id === "ollama"
+    ? {
+        name: tool.name,
+        available: tool.available,
+        models: tool.models ?? []
+      }
+    : {
+        name: tool.name,
+        available: tool.available
+      };
 }
 
 function getBearerToken(request: IncomingMessage): string | undefined {
@@ -233,7 +252,9 @@ export function createSwitchboardServer(
       if (method === "GET" && url.pathname === "/discover") {
         const tools = await discoverTools();
 
-        writeJson(response, 200, { tools } satisfies DiscoverResponse);
+        writeJson(response, 200, {
+          tools: tools.map(toDiscoverToolSummary)
+        } satisfies DiscoverResponse);
         return;
       }
 

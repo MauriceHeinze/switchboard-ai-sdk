@@ -29,6 +29,11 @@ Current behavior:
 - Codex, Claude Code, and OpenCode currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
 - Providers without a stable machine-readable model listing mechanism leave `models` undefined when nothing is configured.
 
+The HTTP `GET /discover` endpoint is intentionally slimmer than the library API:
+
+- all providers return only `name` and `available`
+- Ollama additionally returns `models`
+
 ## Override the model per call
 
 `callTool()` and the HTTP `/call/:toolId` endpoint accept an optional `model` field.

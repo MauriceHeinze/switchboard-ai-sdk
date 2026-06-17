@@ -109,10 +109,18 @@ test("GET /discover requires auth and returns tools", async () => {
     assert.ok(
       body.tools.some(
         (tool) =>
-          tool.id === "codex" &&
+          tool.name === "Codex" &&
+          tool.available === true &&
+          !("models" in tool)
+      )
+    );
+    assert.ok(
+      body.tools.some(
+        (tool) =>
+          tool.name === "Ollama" &&
+          tool.available === true &&
           Array.isArray(tool.models) &&
-          tool.models.includes("gpt-5-codex") &&
-          tool.defaultModel === "gpt-5-codex"
+          tool.models.includes("qwen3:14b")
       )
     );
   } finally {
