@@ -19,7 +19,7 @@ async function main() {
     });
 
     console.log(`\n${label}`);
-    console.log(await res.json());
+    console.log(JSON.stringify(await res.json(), null, 2));
   };
 
   try {
