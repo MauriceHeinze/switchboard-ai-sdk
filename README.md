@@ -128,15 +128,9 @@ Useful configuration knobs include:
 - `SWITCHBOARD_CLAUDE_CODE_MAX_TURNS`
 - `SWITCHBOARD_OPENCODE_MODEL`
 
-## Repository Structure
-
-- [docs/API-REFERENCE.md](docs/API-REFERENCE.md) for response shapes, HTTP payloads, and API behavior
-- [examples/README.md](examples/README.md) for integration examples
-- [tests/README.md](tests/README.md) for test-related notes
-
 ## Why This Project Is Different
 
-Many AI SDKs assume one hosted provider and a metered API bill. `switchboard-ai` is focused on local-first AI tooling on developer machines, so teams can reuse installed tools and keep a familiar provider-style integration without depending on paid remote inference for every request.
+Many AI SDKs assume one hosted provider and a metered API bill. `switchboard-ai-sdk` is focused on local-first AI tooling on developer machines, so teams can reuse installed tools and keep a familiar provider-style integration without depending on paid remote inference for every request.
 
 ## License
 

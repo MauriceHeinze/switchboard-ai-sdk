@@ -1,7 +1,7 @@
 {
-  "name": "switchboard-ai",
-  "version": "0.1.0",
-  "description": "TypeScript SDK for connecting Electron and desktop apps to local AI tools like Ollama, Codex, Claude Code, and OpenCode through one API.",
+  "name": "switchboard-ai-sdk",
+  "version": "0.1.2",
+  "description": "A unified JavaScript SDK for connecting local applications to AI coding tools like Codex, Claude Code, OpenCode, and Ollama to save you API costs.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

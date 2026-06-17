@@ -1,3 +1,1 @@
-- for each new feature you work on, create a new branch. 
 - always git add, commit (conventional commit messages) and push
-- when I say "feature complete" merge to main branch and switch to it.

@@ -1,8 +1,8 @@
-# PRD: switchboard-ai
+# PRD: switchboard-ai-sdk
 
 ## 1. Product Summary
 
-switchboard-ai is an open-source npm package that lets app developers connect their applications to local AI tools like Claude Code, Codex, Ollama, LM Studio, and other locally available AI interfaces.
+switchboard-ai-sdk is an open-source npm package that lets app developers connect their applications to local AI tools like Claude Code, Codex, Ollama, LM Studio, and other locally available AI interfaces.
 
 The goal is to make it easy for developers to power their apps with AI without manually integrating every local AI tool, writing provider-specific glue code, or relying only on paid cloud APIs.
 
@@ -12,7 +12,7 @@ Connect your app to local AI tools.
 
 ## 3. Product Description
 
-switchboard-ai helps app developers discover and use locally available AI tools, agents, and runtimes through one unified API.
+switchboard-ai-sdk helps app developers discover and use locally available AI tools, agents, and runtimes through one unified API.
 
 It starts with Electron support, but the long-term direction is to support any app environment where local AI tools can be discovered and used.
 
@@ -61,7 +61,7 @@ This creates unnecessary friction:
 
 Make local AI tools usable from apps through one simple package.
 
-switchboard-ai should allow a developer to:
+switchboard-ai-sdk should allow a developer to:
 
 - Discover available local AI tools
 - Understand what each tool can do
@@ -86,7 +86,7 @@ Initial versions should not try to:
 
 ### Main positioning
 
-switchboard-ai lets app developers connect to local AI tools like Claude Code and Codex to power their apps with AI.
+switchboard-ai-sdk lets app developers connect to local AI tools like Claude Code and Codex to power their apps with AI.
 
 ### Alternative positioning
 
@@ -98,7 +98,7 @@ switchboard-ai lets app developers connect to local AI tools like Claude Code an
 
 ## 9. Brand Direction
 
-Name: switchboard-ai
+Name: switchboard-ai-sdk
 
 Brand feel:
 
@@ -167,7 +167,7 @@ Possible capabilities:
 
 ### Provider
 
-A specific integration supported by switchboard-ai.
+A specific integration supported by switchboard-ai-sdk.
 
 Examples:
 
@@ -178,7 +178,7 @@ Examples:
 
 ### Capability
 
-A normalized feature that switchboard-ai can expose.
+A normalized feature that switchboard-ai-sdk can expose.
 
 Examples:
 
@@ -198,7 +198,7 @@ The first version should focus on a small but useful package for Electron app de
 
 #### 1. Local Tool Discovery
 
-switchboard-ai should detect whether supported local AI tools are available.
+switchboard-ai-sdk should detect whether supported local AI tools are available.
 
 Initial discovery targets:
 
@@ -239,7 +239,7 @@ Developers should be able to call a supported local AI tool through one interfac
 
 Example:
 
-ts import { discover, connect } from "switchboard-ai";  const tools = await discover();  const ai = await connect("codex");  const result = await ai.run({   prompt: "Evaluate this TOEFL essay and return structured feedback." }); 
+ts import { discover, connect } from "switchboard-ai-sdk";  const tools = await discover();  const ai = await connect("codex");  const result = await ai.run({   prompt: "Evaluate this TOEFL essay and return structured feedback." }); 
 
 #### 4. Capability-Based Access
 
@@ -268,7 +268,7 @@ Later:
 
 #### 6. Safe Defaults
 
-Because some tools may execute commands or access files, switchboard-ai should avoid hiding dangerous behavior.
+Because some tools may execute commands or access files, switchboard-ai-sdk should avoid hiding dangerous behavior.
 
 The package should:
 
@@ -282,19 +282,19 @@ The package should:
 
 ### Install
 
-bash npm install switchboard-ai 
+bash npm install switchboard-ai-sdk 
 
 ### Discover tools
 
-ts import { discover } from "switchboard-ai";  const tools = await discover();  for (const tool of tools) {   console.log(tool.name, tool.available, tool.capabilities); } 
+ts import { discover } from "switchboard-ai-sdk";  const tools = await discover();  for (const tool of tools) {   console.log(tool.name, tool.available, tool.capabilities); } 
 
 ### Connect to a specific tool
 
-ts import { connect } from "switchboard-ai";  const codex = await connect("codex");  const result = await codex.run({   prompt: "Create a test plan for this feature." }); 
+ts import { connect } from "switchboard-ai-sdk";  const codex = await connect("codex");  const result = await codex.run({   prompt: "Create a test plan for this feature." }); 
 
 ### Connect by capability
 
-ts import { connect } from "switchboard-ai";  const ai = await connect({   capability: "agent-task",   prefer: ["claude-code", "codex"] });  const result = await ai.run({   prompt: "Review this codebase and identify bugs." }); 
+ts import { connect } from "switchboard-ai-sdk";  const ai = await connect({   capability: "agent-task",   prefer: ["claude-code", "codex"] });  const result = await ai.run({   prompt: "Review this codebase and identify bugs." }); 
 
 ### Use a local runtime
 
@@ -355,11 +355,11 @@ Potential discovery:
 
 Initial package:
 
-txt switchboard-ai 
+txt switchboard-ai-sdk 
 
 Possible future structure:
 
-txt switchboard-ai @switchboard-ai/core @switchboard-ai/electron @switchboard-ai/codex @switchboard-ai/claude-code @switchboard-ai/ollama @switchboard-ai/lm-studio 
+txt switchboard-ai-sdk @switchboard-ai-sdk/core @switchboard-ai-sdk/electron @switchboard-ai-sdk/codex @switchboard-ai-sdk/claude-code @switchboard-ai-sdk/ollama @switchboard-ai-sdk/lm-studio 
 
 For MVP, keep it simple unless modularization becomes necessary.
 
@@ -438,7 +438,7 @@ Security requirements:
 
 - Document that agentic tools may perform actions
 - Make capabilities explicit
-- Avoid silent command execution inside switchboard-ai itself
+- Avoid silent command execution inside switchboard-ai-sdk itself
 - Do not automatically grant file paths unless passed by the developer
 - Allow developers to inspect which provider is selected
 - Return clear errors when a tool is unavailable or unauthorized
@@ -480,14 +480,14 @@ Longer-term success:
 
 - Other developers request new providers
 - Community contributes provider adapters
-- switchboard-ai becomes the default discovery layer for local AI tools in desktop apps
+- switchboard-ai-sdk becomes the default discovery layer for local AI tools in desktop apps
 - Supports Electron, Tauri, Node CLI, and potentially VS Code extensions
 
 ## 20. Example Use Cases
 
 ### Open Prep
 
-Open Prep can use switchboard-ai to discover locally available AI tools and use them to evaluate writing responses, generate feedback, and power exam-prep workflows.
+Open Prep can use switchboard-ai-sdk to discover locally available AI tools and use them to evaluate writing responses, generate feedback, and power exam-prep workflows.
 
 Example:
 
@@ -501,10 +501,10 @@ Example:
 
 A desktop app wants to add AI features but does not want to force users into one provider.
 
-switchboard-ai allows the app to use local tools when available.
+switchboard-ai-sdk allows the app to use local tools when available.
 
 ### Developer Tool
 
 A developer tool wants an agent to review code, generate tests, or explain files.
 
-switchboard-ai can connect to Claude
+switchboard-ai-sdk can connect to Claude
