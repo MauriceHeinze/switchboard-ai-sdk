@@ -15,9 +15,13 @@ async function withTempPath(commands, run) {
   const tempDir = await mkdtemp(path.join(tmpdir(), "switchboard-path-"));
 
   try {
-    for (const [command, output] of Object.entries(commands)) {
+    for (const [command, definition] of Object.entries(commands)) {
       const commandPath = path.join(tempDir, command);
-      await writeFile(commandPath, `#!/bin/sh\nprintf '%s\\n' "${output}"\n`);
+      const script =
+        typeof definition === "string"
+          ? `#!/bin/sh\nprintf '%s\\n' "${definition}"\n`
+          : definition.script;
+      await writeFile(commandPath, script);
       await chmod(commandPath, 0o755);
     }
 
@@ -141,7 +145,21 @@ test("CLI providers mirror a configured model during discovery", async () => {
       {
         codex: "codex 1.2.3",
         claude: "claude 0.9.0",
-        opencode: "opencode 0.8.0"
+        opencode: {
+          script: `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  printf '%s\n' 'opencode 0.8.0'
+  exit 0
+fi
+
+if [ "$1" = "models" ]; then
+  printf '%s\n' 'openai/gpt-5.4' 'openai/gpt-5.5'
+  exit 0
+fi
+
+exit 1
+`
+        }
       },
       async () => {
         const [codexTool, claudeTool, opencodeTool] = await Promise.all([
@@ -154,7 +172,11 @@ test("CLI providers mirror a configured model during discovery", async () => {
         assert.equal(codexTool.defaultModel, "gpt-5-codex");
         assert.deepEqual(claudeTool.models, ["claude-fable-5"]);
         assert.equal(claudeTool.defaultModel, "claude-fable-5");
-        assert.deepEqual(opencodeTool.models, ["o3-mini"]);
+        assert.deepEqual(opencodeTool.models, [
+          "o3-mini",
+          "openai/gpt-5.4",
+          "openai/gpt-5.5"
+        ]);
         assert.equal(opencodeTool.defaultModel, "o3-mini");
       }
     );
@@ -185,7 +207,21 @@ test("CLI providers leave models undefined when no configured model is available
       {
         codex: "codex 1.2.3",
         claude: "claude 0.9.0",
-        opencode: "opencode 0.8.0"
+        opencode: {
+          script: `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  printf '%s\n' 'opencode 0.8.0'
+  exit 0
+fi
+
+if [ "$1" = "models" ]; then
+  printf '%s\n' 'openai/gpt-5.4' 'openai/gpt-5.5'
+  exit 0
+fi
+
+exit 1
+`
+        }
       },
       async () => {
         const [codexTool, claudeTool, opencodeTool] = await Promise.all([
@@ -198,7 +234,7 @@ test("CLI providers leave models undefined when no configured model is available
         assert.equal(codexTool.defaultModel, undefined);
         assert.equal(claudeTool.models, undefined);
         assert.equal(claudeTool.defaultModel, undefined);
-        assert.equal(opencodeTool.models, undefined);
+        assert.deepEqual(opencodeTool.models, ["openai/gpt-5.4", "openai/gpt-5.5"]);
         assert.equal(opencodeTool.defaultModel, undefined);
       }
     );

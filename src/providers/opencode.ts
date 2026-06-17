@@ -52,7 +52,25 @@ function getConfiguredOpenCodeModel(): string | undefined {
 }
 
 async function listAvailableModels(): Promise<string[] | undefined> {
-  return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
+  const configuredModel = getConfiguredOpenCodeModel();
+
+  try {
+    const { stdout } = await executeCommand("opencode", ["models"], {
+      timeoutMs: DISCOVERY_TIMEOUT_MS
+    });
+    const discoveredModels = stdout
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    if (configuredModel && !discoveredModels.includes(configuredModel)) {
+      discoveredModels.unshift(configuredModel);
+    }
+
+    return discoveredModels;
+  } catch {
+    return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
+  }
 }
 
 export function buildOpenCodeArgs(input: { prompt: string; model?: string }): string[] {
