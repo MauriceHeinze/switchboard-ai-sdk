@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { parseClaudeCodeJsonOutput } from "../dist/providers/claude-code.js";
 import { parseCodexExecJsonOutput } from "../dist/providers/codex.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
 
@@ -26,6 +27,54 @@ test("parseCodexExecJsonOutput extracts the final agent message and usage", () =
       output_tokens: 5
     }
   });
+});
+
+test("parseClaudeCodeJsonOutput extracts result and usage", () => {
+  const result = parseClaudeCodeJsonOutput(
+    JSON.stringify({
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      result: "Hello from Claude Code",
+      cost_usd: 0.05,
+      duration_ms: 5000,
+      num_turns: 2
+    })
+  );
+
+  assert.deepEqual(result, {
+    message: {
+      role: "assistant",
+      content: "Hello from Claude Code"
+    },
+    usage: {
+      cost_usd: 0.05,
+      duration_ms: 5000,
+      num_turns: 2
+    }
+  });
+});
+
+test("parseClaudeCodeJsonOutput throws on error response", () => {
+  assert.throws(
+    () =>
+      parseClaudeCodeJsonOutput(
+        JSON.stringify({
+          type: "result",
+          subtype: "error",
+          is_error: true,
+          result: "something went wrong"
+        })
+      ),
+    /Claude Code returned an error/
+  );
+});
+
+test("parseClaudeCodeJsonOutput throws on empty output", () => {
+  assert.throws(
+    () => parseClaudeCodeJsonOutput(""),
+    /did not return any output/
+  );
 });
 
 test("ollamaProvider chat uses the discovered default model", async () => {
