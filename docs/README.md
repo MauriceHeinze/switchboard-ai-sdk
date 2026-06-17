@@ -6,6 +6,8 @@
 
 switchboard-ai is an open-source npm package for connecting apps to local AI tools through one unified API.
 
+It is designed for developers who want an API-shaped integration but prefer to use local tools they already have instead of paying for hosted LLM APIs on every request.
+
 This documentation area focuses on three things:
 
 - how to connect to an available tool
@@ -13,6 +15,8 @@ This documentation area focuses on three things:
 - what the response looks like
 
 ## Connect to an available tool
+
+This is the same basic pattern you would use with a traditional provider SDK: pick a tool, connect, send input, read the response.
 
 ```ts
 import { connect, discover } from "switchboard-ai";

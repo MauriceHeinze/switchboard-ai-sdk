@@ -13,7 +13,9 @@ It discovers and connects to local AI tools like:
 - Claude Code
 - OpenCode
 
-Use it when you want one integration layer for local LLMs, coding agents, and desktop app AI features.
+It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they already have, like Codex, Claude Code, OpenCode, or Ollama.
+
+The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
 ## Install
 
@@ -37,6 +39,8 @@ if (!toolId) {
 
 const tool = await connect(toolId);
 ```
+
+This gives you a provider-style integration flow without sending every request through a paid hosted API.
 
 If the connected tool supports prompt-style runs:
 
@@ -117,7 +121,7 @@ Current behavior:
 
 ## Call a Provider Through the Library API
 
-Use `callTool()` if you want one direct entrypoint:
+Use `callTool()` if you want one direct entrypoint that looks like a typical LLM provider call:
 
 ```ts
 import { callTool } from "switchboard-ai";
@@ -198,7 +202,7 @@ Useful configuration knobs include:
 
 ## Why This Project Is Different
 
-Many AI SDKs assume one hosted provider. `switchboard-ai` is focused on local-first AI tooling on developer machines with one TypeScript API across multiple local runtimes.
+Many AI SDKs assume one hosted provider and a metered API bill. `switchboard-ai` is focused on local-first AI tooling on developer machines, so teams can reuse installed tools and keep a familiar provider-style integration without depending on paid remote inference for every request.
 
 ## License
 
