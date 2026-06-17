@@ -1,4 +1,7 @@
-import { executeCommand } from "../runtime/execute.js";
+import {
+  executeCommand,
+  spawnInteractiveCommand
+} from "../runtime/execute.js";
 import {
   ProviderExecutionError,
   TimeoutError,
@@ -11,8 +14,19 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ToolAuthCheckResult,
+  ToolAuthStartResult,
   ToolInvocationOptions
 } from "../types.js";
+import {
+  alreadyAuthenticated,
+  authenticatedAuth,
+  extractAuthInstructions,
+  failedAuth,
+  startedAuth,
+  unauthenticatedAuth,
+  unknownAuth
+} from "./auth.js";
 import {
   getConfiguredClaudeCodeModel,
   resolveRequestedModel
@@ -26,6 +40,8 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
+const AUTH_STATUS_COMMAND = ["auth", "status", "--json"] as const;
+const AUTH_START_COMMAND = ["auth", "login", "--claudeai"] as const;
 
 type ClaudeCodeJsonOutput = {
   type?: string;
@@ -112,6 +128,134 @@ function getProcessStderr(error: unknown): string {
 
 function isClaudeCodeAuthError(stderr: string): boolean {
   return /auth|login|api[_ -]?key|not logged in|unauthorized/i.test(stderr);
+}
+
+function getClaudeAuthCommand(args: readonly string[]): string {
+  return ["claude", ...args].join(" ");
+}
+
+export function parseClaudeCodeAuthStatusOutput(
+  output: string
+): ToolAuthCheckResult {
+  const command = getClaudeAuthCommand(AUTH_STATUS_COMMAND);
+  const trimmed = output.trim();
+
+  if (!trimmed) {
+    return unknownAuth(command, output);
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed) as Record<string, unknown>;
+    const authenticated =
+      parsed.authenticated ??
+      parsed.loggedIn ??
+      parsed.isAuthenticated ??
+      parsed.valid;
+
+    if (authenticated === true) {
+      return authenticatedAuth(command, output, "Claude Code is authenticated.");
+    }
+
+    if (authenticated === false) {
+      return unauthenticatedAuth(
+        command,
+        output,
+        "Claude Code requires authentication before it can handle requests."
+      );
+    }
+  } catch {
+    if (/(not logged in|unauthorized|login required)/i.test(trimmed)) {
+      return unauthenticatedAuth(
+        command,
+        output,
+        "Claude Code requires authentication before it can handle requests."
+      );
+    }
+
+    if (/(logged in|authenticated)/i.test(trimmed)) {
+      return authenticatedAuth(command, output, "Claude Code is authenticated.");
+    }
+  }
+
+  return unknownAuth(command, output);
+}
+
+async function checkClaudeCodeAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthCheckResult> {
+  try {
+    const { stdout, stderr } = await executeCommand(
+      "claude",
+      [...AUTH_STATUS_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs
+      }
+    );
+
+    return parseClaudeCodeAuthStatusOutput(
+      [stdout, stderr].filter(Boolean).join("\n")
+    );
+  } catch (error) {
+    const stderr = getProcessStderr(error);
+
+    if (isClaudeCodeAuthError(stderr)) {
+      return unauthenticatedAuth(
+        getClaudeAuthCommand(AUTH_STATUS_COMMAND),
+        stderr,
+        "Claude Code requires authentication before it can handle requests."
+      );
+    }
+
+    return unknownAuth(
+      getClaudeAuthCommand(AUTH_STATUS_COMMAND),
+      stderr || toErrorMessage(error)
+    );
+  }
+}
+
+async function startClaudeCodeAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthStartResult> {
+  const authState = await checkClaudeCodeAuth(options);
+  const command = getClaudeAuthCommand(AUTH_START_COMMAND);
+
+  if (authState.authenticated === true) {
+    return alreadyAuthenticated(command, authState.output);
+  }
+
+  try {
+    const { stdout, stderr, exitCode } = await spawnInteractiveCommand(
+      "claude",
+      [...AUTH_START_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs,
+        captureWindowMs: 1_500
+      }
+    );
+    const output = [stdout, stderr].filter(Boolean).join("\n").trim();
+
+    if (/(already logged in|already authenticated|logged in)/i.test(output)) {
+      return alreadyAuthenticated(command, output);
+    }
+
+    if (exitCode !== null && exitCode !== 0 && !output) {
+      return failedAuth(
+        command,
+        "Claude Code auth command exited before starting.",
+        output
+      );
+    }
+
+    if (exitCode !== null && exitCode !== 0) {
+      return failedAuth(command, "Claude Code auth command failed to start.", output);
+    }
+
+    return startedAuth(command, output, extractAuthInstructions(output));
+  } catch (error) {
+    return failedAuth(command, toErrorMessage(error));
+  }
 }
 
 export function parseClaudeCodeJsonOutput(stdout: string): {
@@ -210,6 +354,12 @@ export const claudeCodeProvider: ProviderDefinition = {
       async health() {
         return true;
       },
+      async checkAuth(options: ToolInvocationOptions = {}) {
+        return checkClaudeCodeAuth(options);
+      },
+      async startAuth(options: ToolInvocationOptions = {}) {
+        return startClaudeCodeAuth(options);
+      },
       async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
@@ -253,5 +403,11 @@ export const claudeCodeProvider: ProviderDefinition = {
     };
 
     return connected;
+  },
+  async checkAuth(_tool, options = {}) {
+    return checkClaudeCodeAuth(options);
+  },
+  async startAuth(_tool, options = {}) {
+    return startClaudeCodeAuth(options);
   }
 };

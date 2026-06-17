@@ -5,6 +5,9 @@ import { createSwitchboardServer } from "../dist/server/http.js";
 import { providerRegistry } from "../dist/providers/index.js";
 
 const ORIGINAL_CODEX_PROVIDER = providerRegistry.codex;
+const ORIGINAL_CLAUDE_PROVIDER = providerRegistry["claude-code"];
+const ORIGINAL_OLLAMA_PROVIDER = providerRegistry.ollama;
+const ORIGINAL_OPENCODE_PROVIDER = providerRegistry.opencode;
 
 function createUrl(server, path) {
   const address = server.address();
@@ -17,6 +20,102 @@ function createUrl(server, path) {
 }
 
 async function startServer(overrides = {}) {
+  providerRegistry["claude-code"] = {
+    async discover() {
+      return {
+        id: "claude-code",
+        name: "Claude Code",
+        type: "agent",
+        available: true,
+        version: "0.9.0",
+        capabilities: ["agent-task", "health-check"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        }
+      };
+    }
+  };
+
+  providerRegistry.ollama = {
+    async discover() {
+      return {
+        id: "ollama",
+        name: "Ollama",
+        type: "runtime",
+        available: true,
+        version: "0.8.0",
+        capabilities: ["chat", "health-check"],
+        models: ["qwen3:14b"],
+        defaultModel: "qwen3:14b"
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async checkAuth() {
+          return {
+            authSupported: false,
+            authenticated: null,
+            authStatus: "not_supported"
+          };
+        },
+        async health() {
+          return true;
+        }
+      };
+    },
+    async checkAuth() {
+      return {
+        authSupported: false,
+        authenticated: null,
+        authStatus: "not_supported"
+      };
+    },
+    async startAuth() {
+      return {
+        status: "unsupported",
+        authenticated: null,
+        command: "ollama"
+      };
+    }
+  };
+
+  providerRegistry.opencode = {
+    async discover() {
+      return {
+        id: "opencode",
+        name: "OpenCode",
+        type: "agent",
+        available: true,
+        version: "0.8.0",
+        capabilities: ["agent-task", "health-check"],
+        models: ["openai/gpt-5.4"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        }
+      };
+    }
+  };
+
   providerRegistry.codex = {
     async discover() {
       return {
@@ -36,6 +135,8 @@ async function startServer(overrides = {}) {
         name: tool.name,
         type: tool.type,
         capabilities: tool.capabilities,
+        models: tool.models,
+        defaultModel: tool.defaultModel,
         async health() {
           return true;
         },
@@ -76,6 +177,9 @@ async function stopServer(serverState) {
   });
 
   providerRegistry.codex = ORIGINAL_CODEX_PROVIDER;
+  providerRegistry["claude-code"] = ORIGINAL_CLAUDE_PROVIDER;
+  providerRegistry.ollama = ORIGINAL_OLLAMA_PROVIDER;
+  providerRegistry.opencode = ORIGINAL_OPENCODE_PROVIDER;
 }
 
 test("GET /health returns server liveness without auth", async () => {
@@ -88,6 +192,15 @@ test("GET /health returns server liveness without auth", async () => {
     assert.equal(response.status, 200);
     assert.equal(body.status, "ok");
     assert.equal(typeof body.uptimeMs, "number");
+    assert.ok(Array.isArray(body.tools));
+    assert.ok(
+      body.tools.some(
+        (tool) =>
+          tool.toolId === "codex" &&
+          tool.status === "healthy" &&
+          tool.authSupported === false
+      )
+    );
   } finally {
     await stopServer(serverState);
   }
@@ -157,6 +270,128 @@ test("GET /health/:toolId reports unavailable tools", async () => {
     assert.equal(response.status, 200);
     assert.equal(body.status, "unavailable");
     assert.equal(body.reason, "CLI not found.");
+    assert.equal(body.authStatus, "not_supported");
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("GET /health/:toolId reports unauthenticated tools distinctly", async () => {
+  const serverState = await startServer({
+    async checkAuth() {
+      return {
+        authSupported: true,
+        authenticated: false,
+        authStatus: "unauthenticated",
+        reason: "Codex requires authentication before it can handle requests."
+      };
+    }
+  });
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/health/codex"));
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "unavailable");
+    assert.equal(body.available, false);
+    assert.equal(body.authSupported, true);
+    assert.equal(body.authenticated, false);
+    assert.equal(body.authStatus, "unauthenticated");
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /auth/:toolId returns started for provider login flows", async () => {
+  const serverState = await startServer({
+    async startAuth() {
+      return {
+        status: "started",
+        authenticated: false,
+        command: "codex login --device-auth",
+        instructions: "Visit https://example.com/device",
+        output: "Visit https://example.com/device"
+      };
+    }
+  });
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/auth/codex"), {
+      method: "POST"
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "started");
+    assert.equal(body.command, "codex login --device-auth");
+    assert.match(body.instructions, /example\.com\/device/);
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /auth/:toolId returns already authenticated when the provider is logged in", async () => {
+  const serverState = await startServer();
+
+  providerRegistry["claude-code"] = {
+    async discover() {
+      return {
+        id: "claude-code",
+        name: "Claude Code",
+        type: "agent",
+        available: true,
+        version: "0.9.0",
+        capabilities: ["agent-task", "health-check"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        }
+      };
+    },
+    async startAuth() {
+      return {
+        status: "already_authenticated",
+        authenticated: true,
+        command: "claude auth login --claudeai",
+        output: "Already logged in"
+      };
+    }
+  };
+
+  try {
+    const response = await fetch(
+      createUrl(serverState.server, "/auth/claude-code"),
+      { method: "POST" }
+    );
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "already_authenticated");
+    assert.equal(body.authenticated, true);
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /auth/:toolId returns unsupported for non-auth providers", async () => {
+  const serverState = await startServer();
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/auth/ollama"), {
+      method: "POST"
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.status, "unsupported");
   } finally {
     await stopServer(serverState);
   }

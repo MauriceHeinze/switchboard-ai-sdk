@@ -52,6 +52,36 @@ export type ToolInvocationOptions = {
   timeoutMs?: number;
 };
 
+export type AuthStatus =
+  | "authenticated"
+  | "unauthenticated"
+  | "not_supported"
+  | "unknown";
+
+export type ToolAuthCheckResult = {
+  authSupported: boolean;
+  authenticated: boolean | null;
+  authStatus: AuthStatus;
+  reason?: string;
+  command?: string;
+  output?: string;
+};
+
+export type ToolAuthStartStatus =
+  | "already_authenticated"
+  | "started"
+  | "unsupported"
+  | "failed";
+
+export type ToolAuthStartResult = {
+  status: ToolAuthStartStatus;
+  authenticated: boolean | null;
+  command: string;
+  message?: string;
+  instructions?: string;
+  output?: string;
+};
+
 export type ToolMessage = {
   role: "assistant";
   content: string;
@@ -71,6 +101,8 @@ export type ConnectedTool = {
   models?: string[];
   defaultModel?: string;
   health(options?: ToolInvocationOptions): Promise<boolean>;
+  checkAuth?(options?: ToolInvocationOptions): Promise<ToolAuthCheckResult>;
+  startAuth?(options?: ToolInvocationOptions): Promise<ToolAuthStartResult>;
   chat(input: ChatInput, options?: ToolInvocationOptions): Promise<ToolResult>;
 };
 

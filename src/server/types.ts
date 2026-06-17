@@ -1,4 +1,11 @@
-import type { ChatInput, ProviderId, ToolResult, ToolType } from "../types.js";
+import type {
+  AuthStatus,
+  ChatInput,
+  ProviderId,
+  ToolAuthStartStatus,
+  ToolResult,
+  ToolType
+} from "../types.js";
 
 export type ToolHealthStatus = "healthy" | "unavailable" | "timeout" | "error";
 
@@ -6,6 +13,9 @@ export type ToolHealthResult = {
   toolId: ProviderId;
   status: ToolHealthStatus;
   available: boolean;
+  authSupported: boolean;
+  authenticated: boolean | null;
+  authStatus: AuthStatus;
   version?: string;
   reason?: string;
   latencyMs: number;
@@ -23,6 +33,24 @@ export type DiscoverResponse = {
 };
 
 export type HealthResponse = ToolHealthResult;
+
+export type AggregateHealthResponse = {
+  status: "ok";
+  version: string;
+  uptimeMs: number;
+  tools: ToolHealthResult[];
+};
+
+export type ToolAuthResponse = {
+  toolId: ProviderId;
+  status: ToolAuthStartStatus;
+  authenticated: boolean | null;
+  command: string;
+  message?: string;
+  instructions?: string;
+  output?: string;
+  checkedAt: string;
+};
 
 export type ChatToolRequest = ChatInput;
 

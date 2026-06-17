@@ -89,6 +89,22 @@ type ConnectedTool = {
   models?: string[];
   defaultModel?: string;
   health(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<boolean>;
+  checkAuth?(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<{
+    authSupported: boolean;
+    authenticated: boolean | null;
+    authStatus: "authenticated" | "unauthenticated" | "not_supported" | "unknown";
+    reason?: string;
+    command?: string;
+    output?: string;
+  }>;
+  startAuth?(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<{
+    status: "already_authenticated" | "started" | "unsupported" | "failed";
+    authenticated: boolean | null;
+    command: string;
+    message?: string;
+    instructions?: string;
+    output?: string;
+  }>;
   chat(
     input: {
       messages: Array<{
@@ -173,8 +189,48 @@ This is what the validator output looks like when local tools are available:
   "toolId": "codex",
   "status": "healthy",
   "available": true,
+  "authSupported": true,
+  "authenticated": true,
+  "authStatus": "authenticated",
   "version": "codex-cli 0.136.0",
   "latencyMs": 406,
+  "checkedAt": "2026-06-17T12:54:44.900Z"
+}
+```
+
+### `GET /health`
+
+```json
+{
+  "status": "ok",
+  "version": "0.1.0",
+  "uptimeMs": 918,
+  "tools": [
+    {
+      "toolId": "codex",
+      "status": "unavailable",
+      "available": false,
+      "authSupported": true,
+      "authenticated": false,
+      "authStatus": "unauthenticated",
+      "reason": "Codex requires authentication before it can handle requests.",
+      "latencyMs": 55,
+      "checkedAt": "2026-06-17T12:54:44.900Z"
+    }
+  ]
+}
+```
+
+### `POST /auth/:toolId`
+
+```json
+{
+  "toolId": "codex",
+  "status": "started",
+  "authenticated": false,
+  "command": "codex login --device-auth",
+  "instructions": "Visit https://example.com/device and enter the code shown by Codex.",
+  "output": "Visit https://example.com/device and enter the code shown by Codex.",
   "checkedAt": "2026-06-17T12:54:44.900Z"
 }
 ```

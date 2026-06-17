@@ -1,10 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { configure } from "../dist/index.js";
-import { parseClaudeCodeJsonOutput } from "../dist/providers/claude-code.js";
-import { parseCodexExecJsonOutput } from "../dist/providers/codex.js";
+import {
+  parseClaudeCodeAuthStatusOutput,
+  parseClaudeCodeJsonOutput
+} from "../dist/providers/claude-code.js";
+import {
+  parseCodexAuthStatusOutput,
+  parseCodexExecJsonOutput
+} from "../dist/providers/codex.js";
 import {
   buildOpenCodeArgs,
+  parseOpenCodeAuthStatusOutput,
   parseOpenCodeJsonOutput
 } from "../dist/providers/opencode.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
@@ -80,6 +87,21 @@ test("parseClaudeCodeJsonOutput throws on empty output", () => {
     () => parseClaudeCodeJsonOutput(""),
     /did not return any output/
   );
+});
+
+test("parseClaudeCodeAuthStatusOutput parses authenticated JSON", () => {
+  const result = parseClaudeCodeAuthStatusOutput(
+    JSON.stringify({ authenticated: true })
+  );
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: true,
+    authStatus: "authenticated",
+    reason: "Claude Code is authenticated.",
+    command: "claude auth status --json",
+    output: JSON.stringify({ authenticated: true })
+  });
 });
 
 test("parseOpenCodeJsonOutput extracts text events", () => {
@@ -179,6 +201,34 @@ test("parseOpenCodeJsonOutput throws when no text events", () => {
       ),
     /did not return a text response/
   );
+});
+
+test("parseCodexAuthStatusOutput parses unauthenticated text", () => {
+  const output = "Not logged in. Run `codex login` to continue.";
+  const result = parseCodexAuthStatusOutput(output);
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: false,
+    authStatus: "unauthenticated",
+    reason: "Codex requires authentication before it can handle requests.",
+    command: "codex login status",
+    output
+  });
+});
+
+test("parseOpenCodeAuthStatusOutput parses authenticated text heuristics", () => {
+  const output = "default provider configured and connected";
+  const result = parseOpenCodeAuthStatusOutput(output);
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: true,
+    authStatus: "authenticated",
+    reason: "OpenCode is authenticated.",
+    command: "opencode providers list",
+    output
+  });
 });
 
 test("buildOpenCodeArgs uses the selected model when provided", () => {

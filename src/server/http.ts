@@ -1,9 +1,16 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { URL } from "node:url";
-import { discoverTools, checkToolHealth, chatWithTool } from "./service.js";
+import {
+  discoverTools,
+  checkAllToolsHealth,
+  checkToolHealth,
+  chatWithTool,
+  startToolAuth
+} from "./service.js";
 import {
   ProviderExecutionError,
   TimeoutError,
+  ToolAuthError,
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
@@ -12,6 +19,7 @@ import type {
   ChatToolRequest,
   DiscoverToolSummary,
   DiscoverResponse,
+  AggregateHealthResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions
 } from "./types.js";
@@ -171,6 +179,11 @@ function mapError(response: ServerResponse, error: unknown): void {
     return;
   }
 
+  if (error instanceof ToolAuthError) {
+    writeError(response, 401, "tool_auth_required", error.message);
+    return;
+  }
+
   if (error instanceof TimeoutError) {
     writeError(response, 504, "timeout", error.message);
     return;
@@ -200,16 +213,37 @@ export function createSwitchboardServer(
     const method = request.method ?? "GET";
     const url = new URL(request.url ?? "/", `http://${host}`);
 
-    if (method === "GET" && url.pathname === "/health") {
-      writeJson(response, 200, {
-        status: "ok",
-        version: "0.1.0",
-        uptimeMs: Date.now() - startedAt
-      });
-      return;
-    }
-
     try {
+      if (method === "GET" && url.pathname === "/health") {
+        const tools = await checkAllToolsHealth({
+          timeoutMs: maxTimeoutMs
+        });
+
+        writeJson(response, 200, {
+          status: "ok",
+          version: "0.1.0",
+          uptimeMs: Date.now() - startedAt,
+          tools
+        } satisfies AggregateHealthResponse);
+        return;
+      }
+
+      if (method === "POST" && url.pathname.startsWith("/auth/")) {
+        const toolId = getToolId(url.pathname);
+
+        if (!toolId) {
+          writeError(response, 404, "not_found", "Route not found.");
+          return;
+        }
+
+        const result = await startToolAuth(toolId, {
+          timeoutMs: maxTimeoutMs
+        });
+
+        writeJson(response, 200, result);
+        return;
+      }
+
       if (method === "GET" && url.pathname === "/discover") {
         const tools = await discoverTools();
 

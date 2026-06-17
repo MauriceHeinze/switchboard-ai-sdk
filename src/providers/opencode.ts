@@ -1,4 +1,7 @@
-import { executeCommand } from "../runtime/execute.js";
+import {
+  executeCommand,
+  spawnInteractiveCommand
+} from "../runtime/execute.js";
 import {
   ProviderExecutionError,
   TimeoutError,
@@ -11,8 +14,19 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ToolAuthCheckResult,
+  ToolAuthStartResult,
   ToolInvocationOptions
 } from "../types.js";
+import {
+  alreadyAuthenticated,
+  authenticatedAuth,
+  extractAuthInstructions,
+  failedAuth,
+  startedAuth,
+  unauthenticatedAuth,
+  unknownAuth
+} from "./auth.js";
 import {
   getConfiguredModel,
   getConfiguredModelInfo,
@@ -27,6 +41,8 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
+const AUTH_STATUS_COMMAND = ["providers", "list"] as const;
+const AUTH_START_COMMAND = ["providers", "login"] as const;
 
 type OpenCodeEvent = {
   type?: string;
@@ -121,6 +137,111 @@ function getProcessStderr(error: unknown): string {
 
 function isOpenCodeAuthError(stderr: string): boolean {
   return /auth|login|api[_ -]?key|unauthorized|not logged in/i.test(stderr);
+}
+
+function getOpenCodeAuthCommand(args: readonly string[]): string {
+  return ["opencode", ...args].join(" ");
+}
+
+export function parseOpenCodeAuthStatusOutput(
+  output: string
+): ToolAuthCheckResult {
+  const command = getOpenCodeAuthCommand(AUTH_STATUS_COMMAND);
+  const normalized = output.trim();
+
+  if (!normalized) {
+    return unknownAuth(command, output);
+  }
+
+  if (/(not logged in|unauthorized|login required|no credentials)/i.test(normalized)) {
+    return unauthenticatedAuth(
+      command,
+      output,
+      "OpenCode requires authentication before it can handle requests."
+    );
+  }
+
+  if (/(logged in|authenticated|connected|default provider.*configured)/i.test(normalized)) {
+    return authenticatedAuth(command, output, "OpenCode is authenticated.");
+  }
+
+  return unknownAuth(command, output);
+}
+
+async function checkOpenCodeAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthCheckResult> {
+  try {
+    const { stdout, stderr } = await executeCommand(
+      "opencode",
+      [...AUTH_STATUS_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs
+      }
+    );
+
+    return parseOpenCodeAuthStatusOutput([stdout, stderr].filter(Boolean).join("\n"));
+  } catch (error) {
+    const stderr = getProcessStderr(error);
+
+    if (isOpenCodeAuthError(stderr)) {
+      return unauthenticatedAuth(
+        getOpenCodeAuthCommand(AUTH_STATUS_COMMAND),
+        stderr,
+        "OpenCode requires authentication before it can handle requests."
+      );
+    }
+
+    return unknownAuth(
+      getOpenCodeAuthCommand(AUTH_STATUS_COMMAND),
+      stderr || toErrorMessage(error)
+    );
+  }
+}
+
+async function startOpenCodeAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthStartResult> {
+  const authState = await checkOpenCodeAuth(options);
+  const command = getOpenCodeAuthCommand(AUTH_START_COMMAND);
+
+  if (authState.authenticated === true) {
+    return alreadyAuthenticated(command, authState.output);
+  }
+
+  try {
+    const { stdout, stderr, exitCode } = await spawnInteractiveCommand(
+      "opencode",
+      [...AUTH_START_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs,
+        captureWindowMs: 1_500
+      }
+    );
+    const output = [stdout, stderr].filter(Boolean).join("\n").trim();
+
+    if (/(already logged in|already authenticated|logged in)/i.test(output)) {
+      return alreadyAuthenticated(command, output);
+    }
+
+    if (exitCode !== null && exitCode !== 0 && !output) {
+      return failedAuth(
+        command,
+        "OpenCode auth command exited before starting.",
+        output
+      );
+    }
+
+    if (exitCode !== null && exitCode !== 0) {
+      return failedAuth(command, "OpenCode auth command failed to start.", output);
+    }
+
+    return startedAuth(command, output, extractAuthInstructions(output));
+  } catch (error) {
+    return failedAuth(command, toErrorMessage(error));
+  }
 }
 
 export function parseOpenCodeJsonOutput(stdout: string): {
@@ -218,6 +339,12 @@ export const opencodeProvider: ProviderDefinition = {
       async health() {
         return true;
       },
+      async checkAuth(options: ToolInvocationOptions = {}) {
+        return checkOpenCodeAuth(options);
+      },
+      async startAuth(options: ToolInvocationOptions = {}) {
+        return startOpenCodeAuth(options);
+      },
       async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
@@ -261,5 +388,11 @@ export const opencodeProvider: ProviderDefinition = {
     };
 
     return connected;
+  },
+  async checkAuth(_tool, options = {}) {
+    return checkOpenCodeAuth(options);
+  },
+  async startAuth(_tool, options = {}) {
+    return startOpenCodeAuth(options);
   }
 };

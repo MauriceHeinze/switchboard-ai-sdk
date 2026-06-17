@@ -1,4 +1,7 @@
-import { executeCommand } from "../runtime/execute.js";
+import {
+  executeCommand,
+  spawnInteractiveCommand
+} from "../runtime/execute.js";
 import {
   ProviderExecutionError,
   TimeoutError,
@@ -11,8 +14,19 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ToolAuthCheckResult,
+  ToolAuthStartResult,
   ToolInvocationOptions
 } from "../types.js";
+import {
+  alreadyAuthenticated,
+  authenticatedAuth,
+  extractAuthInstructions,
+  failedAuth,
+  startedAuth,
+  unauthenticatedAuth,
+  unknownAuth
+} from "./auth.js";
 import {
   getConfiguredCodexModel,
   resolveRequestedModel
@@ -26,6 +40,8 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
+const AUTH_STATUS_COMMAND = ["login", "status"] as const;
+const AUTH_START_COMMAND = ["login", "--device-auth"] as const;
 const ALLOWED_SANDBOX_MODES = new Set([
   "read-only",
   "workspace-write",
@@ -114,6 +130,107 @@ function isCodexAuthError(stderr: string): boolean {
   return /auth|login|api[_ -]?key/i.test(stderr);
 }
 
+function getCodexAuthCommand(args: readonly string[]): string {
+  return ["codex", ...args].join(" ");
+}
+
+export function parseCodexAuthStatusOutput(
+  output: string
+): ToolAuthCheckResult {
+  const command = getCodexAuthCommand(AUTH_STATUS_COMMAND);
+  const normalized = output.trim();
+
+  if (!normalized) {
+    return unknownAuth(command, output);
+  }
+
+  if (/(not logged in|logged out|login required|unauthenticated)/i.test(normalized)) {
+    return unauthenticatedAuth(
+      command,
+      output,
+      "Codex requires authentication before it can handle requests."
+    );
+  }
+
+  if (/(logged in|authenticated|active session|ready)/i.test(normalized)) {
+    return authenticatedAuth(command, output, "Codex is authenticated.");
+  }
+
+  return unknownAuth(command, output);
+}
+
+async function checkCodexAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthCheckResult> {
+  try {
+    const { stdout, stderr } = await executeCommand(
+      "codex",
+      [...AUTH_STATUS_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs
+      }
+    );
+
+    return parseCodexAuthStatusOutput([stdout, stderr].filter(Boolean).join("\n"));
+  } catch (error) {
+    const stderr = getProcessStderr(error);
+
+    if (isCodexAuthError(stderr)) {
+      return unauthenticatedAuth(
+        getCodexAuthCommand(AUTH_STATUS_COMMAND),
+        stderr,
+        "Codex requires authentication before it can handle requests."
+      );
+    }
+
+    return unknownAuth(
+      getCodexAuthCommand(AUTH_STATUS_COMMAND),
+      stderr || toErrorMessage(error)
+    );
+  }
+}
+
+async function startCodexAuth(
+  options: ToolInvocationOptions = {}
+): Promise<ToolAuthStartResult> {
+  const authState = await checkCodexAuth(options);
+  const command = getCodexAuthCommand(AUTH_START_COMMAND);
+
+  if (authState.authenticated === true) {
+    return alreadyAuthenticated(command, authState.output);
+  }
+
+  try {
+    const { stdout, stderr, exitCode } = await spawnInteractiveCommand(
+      "codex",
+      [...AUTH_START_COMMAND],
+      {
+        signal: options.signal,
+        timeoutMs: options.timeoutMs,
+        captureWindowMs: 1_500
+      }
+    );
+    const output = [stdout, stderr].filter(Boolean).join("\n").trim();
+
+    if (/(already logged in|already authenticated|logged in)/i.test(output)) {
+      return alreadyAuthenticated(command, output);
+    }
+
+    if (exitCode !== null && exitCode !== 0 && !output) {
+      return failedAuth(command, "Codex auth command exited before starting.", output);
+    }
+
+    if (exitCode !== null && exitCode !== 0) {
+      return failedAuth(command, "Codex auth command failed to start.", output);
+    }
+
+    return startedAuth(command, output, extractAuthInstructions(output));
+  } catch (error) {
+    return failedAuth(command, toErrorMessage(error));
+  }
+}
+
 export function parseCodexExecJsonOutput(stdout: string): {
   message: {
     role: "assistant";
@@ -200,6 +317,12 @@ export const codexProvider: ProviderDefinition = {
       async health() {
         return true;
       },
+      async checkAuth(options: ToolInvocationOptions = {}) {
+        return checkCodexAuth(options);
+      },
+      async startAuth(options: ToolInvocationOptions = {}) {
+        return startCodexAuth(options);
+      },
       async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
@@ -239,5 +362,11 @@ export const codexProvider: ProviderDefinition = {
     };
 
     return connected;
+  },
+  async checkAuth(_tool, options = {}) {
+    return checkCodexAuth(options);
+  },
+  async startAuth(_tool, options = {}) {
+    return startCodexAuth(options);
   }
 };

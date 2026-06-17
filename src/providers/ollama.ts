@@ -10,8 +10,11 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ToolAuthCheckResult,
+  ToolAuthStartResult,
   ToolInvocationOptions
 } from "../types.js";
+import { notSupportedAuth, unsupportedAuth } from "./auth.js";
 import {
   getConfiguredModel,
   resolveRequestedModel
@@ -246,6 +249,12 @@ export const ollamaProvider: ProviderDefinition = {
       capabilities: tool.capabilities,
       models: tool.models,
       defaultModel: tool.defaultModel,
+      async checkAuth(): Promise<ToolAuthCheckResult> {
+        return notSupportedAuth("ollama");
+      },
+      async startAuth(): Promise<ToolAuthStartResult> {
+        return unsupportedAuth("ollama");
+      },
       async health(options: ToolInvocationOptions = {}) {
         const models = await listOllamaModels(options.signal);
         return models.length > 0;
@@ -285,5 +294,11 @@ export const ollamaProvider: ProviderDefinition = {
     };
 
     return connected;
+  },
+  async checkAuth() {
+    return notSupportedAuth("ollama");
+  },
+  async startAuth() {
+    return unsupportedAuth("ollama");
   }
 };

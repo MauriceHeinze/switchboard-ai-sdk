@@ -215,6 +215,17 @@ await tool.chat(
 );
 ```
 
+Auth-capable CLI tools also expose optional auth helpers:
+
+```ts
+const auth = await tool.checkAuth?.({ timeoutMs: 10_000 });
+
+if (auth?.authStatus === "unauthenticated") {
+  const started = await tool.startAuth?.({ timeoutMs: 10_000 });
+  console.log(started?.instructions ?? started?.output);
+}
+```
+
 ## Error Handling
 
 Direct SDK usage throws typed errors instead of returning HTTP status codes:

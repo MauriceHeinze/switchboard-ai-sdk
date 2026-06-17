@@ -3,8 +3,10 @@ export { configure } from "./config.js";
 export { discover } from "./discovery/discover.js";
 export {
   chatWithTool,
+  checkAllToolsHealth,
   checkToolHealth,
-  discoverTools
+  discoverTools,
+  startToolAuth
 } from "./server/service.js";
 export {
   createSwitchboardServer,
@@ -30,9 +32,11 @@ export type {
   ChatToolRequest,
   ChatToolResponse,
   DiscoverResponse,
+  AggregateHealthResponse,
   HealthResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions,
+  ToolAuthResponse,
   ToolHealthResult,
   ToolHealthStatus,
   ToolOperationOptions

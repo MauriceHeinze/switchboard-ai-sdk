@@ -180,6 +180,7 @@ Endpoints:
 
 - `GET /health`
 - `GET /discover`
+- `POST /auth/:toolId`
 - `POST /chat/:toolId`
 - `GET /health/:toolId`
 
