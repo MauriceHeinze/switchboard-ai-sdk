@@ -7,7 +7,13 @@ import {
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
-import type { ChatInput, ConnectedTool, DiscoveredTool, ProviderId } from "../types.js";
+import type {
+  ChatInput,
+  ConnectedTool,
+  DiscoveredTool,
+  ProviderId,
+  ToolInvocationOptions
+} from "../types.js";
 import type { CallToolOptions, CallToolRequest, CallToolResponse, ToolHealthResult, ToolOperationOptions } from "./types.js";
 
 function nowIsoString(): string {
@@ -32,6 +38,38 @@ async function withTimeout<T>(
     }, timeoutMs);
 
     operation.then(
+      (result) => {
+        clearTimeout(timeoutId);
+        resolve(result);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function withAbortableTimeout<T>(
+  operation: (options: ToolInvocationOptions) => Promise<T>,
+  timeoutMs?: number
+): Promise<T> {
+  if (timeoutMs === undefined) {
+    return operation({});
+  }
+
+  const controller = new AbortController();
+
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new TimeoutError());
+    }, timeoutMs);
+
+    operation({
+      signal: controller.signal,
+      timeoutMs
+    }).then(
       (result) => {
         clearTimeout(timeoutId);
         resolve(result);
@@ -85,7 +123,10 @@ export async function checkToolHealth(
     }
 
     const tool = await withTimeout(connect(toolId), options.timeoutMs);
-    const healthy = await withTimeout(tool.health(), options.timeoutMs);
+    const healthy = await withAbortableTimeout(
+      (invocationOptions) => tool.health(invocationOptions),
+      options.timeoutMs
+    );
 
     return {
       toolId,
@@ -154,8 +195,14 @@ export async function callTool(
   assertToolSupportsRequest(tool, input);
 
   const result = isChatInput(input)
-    ? await withTimeout(tool.chat!(input), options.timeoutMs)
-    : await withTimeout(tool.run!(input), options.timeoutMs);
+    ? await withAbortableTimeout(
+        (invocationOptions) => tool.chat!(input, invocationOptions),
+        options.timeoutMs
+      )
+    : await withAbortableTimeout(
+        (invocationOptions) => tool.run!(input, invocationOptions),
+        options.timeoutMs
+      );
 
   return {
     toolId,
