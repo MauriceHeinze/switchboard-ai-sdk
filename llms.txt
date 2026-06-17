@@ -16,8 +16,8 @@ Primary use cases:
 ## Primary Docs
 
 - Repository: https://github.com/MauriceHeinze/switchboard-ai
-- README: README.md
-- Docs: docs/README.md
+- Overview and getting started: README.md
+- API reference: docs/API-REFERENCE.md
 - Examples: examples/README.md
 
 ## Key Terms

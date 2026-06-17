@@ -1,56 +1,12 @@
 <p align="center">
-  <img src="../logo/logo_full.svg" alt="switchboard-ai-sdk logo" />
+  <img src="../logo/logo_full.svg" alt="switchboard-ai logo" />
 </p>
 
-# Docs
+# API Reference
 
-switchboard-ai-sdk is an open-source npm package for connecting apps to local AI tools through one unified API.
+Technical reference for `switchboard-ai`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md).
 
-It is designed for developers who want an API-shaped integration but prefer to use local tools they already have instead of paying for hosted LLM APIs on every request.
-
-This documentation area focuses on three things:
-
-- how to connect to an available tool
-- how to send a prompt
-- what the response looks like
-
-## Connect to an available tool
-
-This is the same basic pattern you would use with a traditional provider SDK: pick a tool, connect, send a prompt, read the response.
-
-```ts
-import { connect, discover } from "switchboard-ai-sdk";
-
-const tools = await discover();
-const toolId = tools.find((tool) => tool.available)?.id;
-
-if (!toolId) {
-  throw new Error("No local AI tool is available.");
-}
-
-const tool = await connect(toolId);
-```
-
-## Send a prompt
-
-Use `chat()` and pass the prompt as a single user message:
-
-```ts
-const response = await tool.chat?.({
-  messages: [
-    {
-      role: "user",
-      content: "Generate me a list of five healthy lunch ideas."
-    }
-  ]
-});
-
-console.log(response?.message.content);
-```
-
-This keeps the app flow simple: pass a prompt, get a response.
-
-## Response shape
+## `tool.chat()` Response Shape
 
 `chat()` returns this result format:
 
@@ -69,7 +25,7 @@ This keeps the app flow simple: pass a prompt, get a response.
 }
 ```
 
-## Example responses
+## HTTP Endpoint Examples
 
 This is what the validator output looks like when local tools are available:
 
@@ -175,12 +131,12 @@ This is what the validator output looks like when local tools are available:
 }
 ```
 
-## Discover available models
+## Model Discovery Behavior
 
-`discover()` now returns model information when a provider can expose it.
+`discover()` returns model information when a provider can expose it.
 
 ```ts
-import { discover } from "switchboard-ai-sdk";
+import { discover } from "switchboard-ai";
 
 const tools = await discover();
 

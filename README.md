@@ -6,6 +6,8 @@
 
 `switchboard-ai` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
+This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md).
+
 It discovers and connects to local AI tools like:
 
 - Ollama
@@ -63,25 +65,6 @@ This keeps the app flow simple: pass a prompt, get a response.
 | `codex` | agent | Code analysis and code editing workflows |
 | `claude-code` | agent | Agent-style coding tasks from the Claude CLI |
 | `opencode` | agent | Agent-style coding tasks from the OpenCode CLI |
-
-## Response Shape
-
-`chat()` returns this result shape:
-
-```ts
-{
-  message: {
-    role: "assistant",
-    content: "..."
-  },
-  usage: {
-    // optional numeric provider metrics
-  },
-  metadata: {
-    // optional provider-specific details
-  }
-}
-```
 
 ## Discover Models
 
@@ -146,7 +129,7 @@ Useful configuration knobs include:
 
 ## Repository Structure
 
-- [docs/README.md](docs/README.md) for usage notes and API behavior
+- [docs/API-REFERENCE.md](docs/API-REFERENCE.md) for response shapes, HTTP payloads, and API behavior
 - [examples/README.md](examples/README.md) for integration examples
 - [tests/README.md](tests/README.md) for test-related notes
 
