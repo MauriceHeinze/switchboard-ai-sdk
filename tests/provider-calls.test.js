@@ -63,9 +63,7 @@ test("ollamaProvider chat uses the discovered default model", async () => {
       available: true,
       version: "0.1.0",
       capabilities: ["chat", "health-check"],
-      metadata: {
-        defaultModel: "qwen3:14b"
-      }
+      defaultModel: "qwen3:14b"
     });
 
     const result = await tool.chat({

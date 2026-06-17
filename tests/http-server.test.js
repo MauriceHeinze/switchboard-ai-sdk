@@ -25,7 +25,9 @@ async function startServer(overrides = {}) {
         type: "agent",
         available: true,
         version: "1.2.3",
-        capabilities: ["agent-task", "health-check"]
+        capabilities: ["agent-task", "health-check"],
+        models: ["gpt-5-codex"],
+        defaultModel: "gpt-5-codex"
       };
     },
     async connect(tool) {
@@ -104,7 +106,15 @@ test("GET /discover requires auth and returns tools", async () => {
 
     assert.equal(response.status, 200);
     assert.equal(body.tools.length, 3);
-    assert.ok(body.tools.some((tool) => tool.id === "codex"));
+    assert.ok(
+      body.tools.some(
+        (tool) =>
+          tool.id === "codex" &&
+          Array.isArray(tool.models) &&
+          tool.models.includes("gpt-5-codex") &&
+          tool.defaultModel === "gpt-5-codex"
+      )
+    );
   } finally {
     await stopServer(server);
   }

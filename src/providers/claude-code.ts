@@ -43,6 +43,8 @@ export const claudeCodeProvider: ProviderDefinition = {
       name: tool.name,
       type: tool.type,
       capabilities: tool.capabilities,
+      models: tool.models,
+      defaultModel: tool.defaultModel,
       async health() {
         return true;
       },

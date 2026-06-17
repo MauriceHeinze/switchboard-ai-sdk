@@ -43,6 +43,12 @@ function getCodexSandboxMode(): string {
     : "read-only";
 }
 
+function getConfiguredCodexModel(): string | undefined {
+  const configuredModel = process.env.SWITCHBOARD_CODEX_MODEL?.trim();
+
+  return configuredModel ? configuredModel : undefined;
+}
+
 function buildCodexExecArgs(input: AgentRunInput): string[] {
   const args = [
     "exec",
@@ -60,8 +66,10 @@ function buildCodexExecArgs(input: AgentRunInput): string[] {
     args.push("--ignore-user-config");
   }
 
-  if (process.env.SWITCHBOARD_CODEX_MODEL) {
-    args.push("--model", process.env.SWITCHBOARD_CODEX_MODEL);
+  const configuredModel = getConfiguredCodexModel();
+
+  if (configuredModel) {
+    args.push("--model", configuredModel);
   }
 
   args.push(input.prompt);
@@ -147,11 +155,14 @@ export const codexProvider: ProviderDefinition = {
       const { stdout } = await executeCommand("codex", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
+      const configuredModel = getConfiguredCodexModel();
 
       return {
         ...TOOL,
         available: true,
         version: stdout || undefined,
+        models: configuredModel ? [configuredModel] : undefined,
+        defaultModel: configuredModel,
         metadata: {
           sandboxMode: getCodexSandboxMode()
         }
@@ -176,6 +187,8 @@ export const codexProvider: ProviderDefinition = {
       name: tool.name,
       type: tool.type,
       capabilities: tool.capabilities,
+      models: tool.models,
+      defaultModel: tool.defaultModel,
       async health() {
         return true;
       },
