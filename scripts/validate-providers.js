@@ -68,6 +68,10 @@ async function main() {
       console.log(`    Config: ${envVar} (${configStatus})`);
     }
 
+    if (defaultModel) {
+      console.log(`    Default: ${defaultModel}`);
+    }
+
     if (models.length === 0) {
       console.log(`    Models: none discovered`);
       if (!configuredModel) {

@@ -12,6 +12,7 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
+import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "codex",
@@ -44,9 +45,11 @@ function getCodexSandboxMode(): string {
 }
 
 function getConfiguredCodexModel(): string | undefined {
-  const configuredModel = process.env.SWITCHBOARD_CODEX_MODEL?.trim();
+  return getConfiguredModel("SWITCHBOARD_CODEX_MODEL");
+}
 
-  return configuredModel ? configuredModel : undefined;
+async function listAvailableModels(): Promise<string[] | undefined> {
+  return getConfiguredModelInfo("SWITCHBOARD_CODEX_MODEL").models;
 }
 
 function buildCodexExecArgs(input: AgentRunInput): string[] {
@@ -155,13 +158,14 @@ export const codexProvider: ProviderDefinition = {
       const { stdout } = await executeCommand("codex", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
+      const availableModels = await listAvailableModels();
       const configuredModel = getConfiguredCodexModel();
 
       return {
         ...TOOL,
         available: true,
         version: stdout || undefined,
-        models: configuredModel ? [configuredModel] : undefined,
+        models: availableModels,
         defaultModel: configuredModel,
         metadata: {
           sandboxMode: getCodexSandboxMode()

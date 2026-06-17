@@ -12,6 +12,7 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
+import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "opencode",
@@ -42,9 +43,11 @@ type OpenCodeEvent = {
 };
 
 function getConfiguredOpenCodeModel(): string | undefined {
-  const configuredModel = process.env.SWITCHBOARD_OPENCODE_MODEL?.trim();
+  return getConfiguredModel("SWITCHBOARD_OPENCODE_MODEL");
+}
 
-  return configuredModel ? configuredModel : undefined;
+async function listAvailableModels(): Promise<string[] | undefined> {
+  return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
 }
 
 function buildOpenCodeArgs(input: AgentRunInput): string[] {
@@ -151,13 +154,14 @@ export const opencodeProvider: ProviderDefinition = {
       const { stdout } = await executeCommand("opencode", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
+      const availableModels = await listAvailableModels();
       const configuredModel = getConfiguredOpenCodeModel();
 
       return {
         ...TOOL,
         available: true,
         version: stdout || undefined,
-        models: configuredModel ? [configuredModel] : undefined,
+        models: availableModels,
         defaultModel: configuredModel
       };
     } catch {

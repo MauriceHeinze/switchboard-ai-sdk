@@ -12,6 +12,7 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
+import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "claude-code",
@@ -33,9 +34,11 @@ type ClaudeCodeJsonOutput = {
 };
 
 function getConfiguredClaudeCodeModel(): string | undefined {
-  const configuredModel = process.env.SWITCHBOARD_CLAUDE_CODE_MODEL?.trim();
+  return getConfiguredModel("SWITCHBOARD_CLAUDE_CODE_MODEL");
+}
 
-  return configuredModel ? configuredModel : undefined;
+async function listAvailableModels(): Promise<string[] | undefined> {
+  return getConfiguredModelInfo("SWITCHBOARD_CLAUDE_CODE_MODEL").models;
 }
 
 function getMaxTurns(): number | undefined {
@@ -161,13 +164,14 @@ export const claudeCodeProvider: ProviderDefinition = {
       const { stdout } = await executeCommand("claude", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
+      const availableModels = await listAvailableModels();
       const configuredModel = getConfiguredClaudeCodeModel();
 
       return {
         ...TOOL,
         available: true,
         version: stdout || undefined,
-        models: configuredModel ? [configuredModel] : undefined,
+        models: availableModels,
         defaultModel: configuredModel
       };
     } catch {

@@ -11,6 +11,7 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
+import { getConfiguredModel } from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "ollama",
@@ -61,6 +62,10 @@ function getOllamaBaseUrl(): string {
   return `http://${configuredHost}`;
 }
 
+function getConfiguredOllamaModel(): string | undefined {
+  return getConfiguredModel("SWITCHBOARD_OLLAMA_MODEL");
+}
+
 async function requestOllama<T>(
   path: string,
   init: RequestInit = {}
@@ -105,8 +110,10 @@ async function resolveOllamaModel(
   tool: DiscoveredTool,
   signal?: AbortSignal
 ): Promise<string> {
-  if (typeof process.env.SWITCHBOARD_OLLAMA_MODEL === "string") {
-    return process.env.SWITCHBOARD_OLLAMA_MODEL;
+  const configuredModel = getConfiguredOllamaModel();
+
+  if (configuredModel) {
+    return configuredModel;
   }
 
   const discoveredDefaultModel = tool.defaultModel;
@@ -136,13 +143,14 @@ export const ollamaProvider: ProviderDefinition = {
 
       try {
         const availableModels = await listOllamaModels();
+        const configuredModel = getConfiguredOllamaModel();
 
         return {
           ...TOOL,
           available: true,
           version: stdout || undefined,
           models: availableModels,
-          defaultModel: availableModels[0],
+          defaultModel: configuredModel ?? availableModels[0],
           metadata: {
             modelSource: "discovered"
           }
