@@ -117,9 +117,17 @@ async function requestOllama<T>(
 ): Promise<T> {
   let response: Response;
 
+  // Implement a default timeout of 30 seconds if no signal is provided
+  const timeout = 30_000;
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  
+  const signal = init.signal || controller.signal;
+
   try {
-    response = await fetch(`${getOllamaBaseUrl()}${path}`, init);
+    response = await fetch(`${getOllamaBaseUrl()}${path}`, { ...init, signal });
   } catch (error) {
+    clearTimeout(id);
     if (error instanceof Error && error.name === "AbortError") {
       throw new TimeoutError();
     }
@@ -128,9 +136,12 @@ async function requestOllama<T>(
       TOOL.id,
       "Ollama is installed but its local API is not reachable."
     );
+  } finally {
+    clearTimeout(id);
   }
 
   if (!response.ok) {
+...[truncated]
     const body = await response.text();
 
     throw new ProviderExecutionError(
