@@ -17,6 +17,7 @@ It discovers and connects to local AI tools like:
 - OpenCode
 
 It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they already have, like Codex, Claude Code, OpenCode, or Ollama.
+If you use OpenCode and do not have, or do not want to provide, a paid AI subscription, you can point it at OpenCode's free hosted models such as `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free`.
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
@@ -89,7 +90,8 @@ for (const tool of tools) {
 Current behavior:
 
 - Ollama returns installed local models.
-- Codex, Claude Code, and OpenCode return configured models when one is explicitly set.
+- Codex and Claude Code return configured models when one is explicitly set.
+- OpenCode can expose its available models through the CLI, and you can also set `SWITCHBOARD_OPENCODE_MODEL` directly. This includes free OpenCode-hosted options like `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free` if you do not want to bring your own subscription.
 
 ## Run the Local HTTP Server
 
@@ -127,6 +129,12 @@ Useful configuration knobs include:
 - `SWITCHBOARD_CLAUDE_CODE_MODEL`
 - `SWITCHBOARD_CLAUDE_CODE_MAX_TURNS`
 - `SWITCHBOARD_OPENCODE_MODEL`
+
+Example:
+
+```bash
+SWITCHBOARD_OPENCODE_MODEL=opencode/deepseek-v4-flash-free
+```
 
 ## Why This Project Is Different
 

@@ -153,7 +153,8 @@ for (const tool of tools) {
 Current behavior:
 
 - Ollama returns installed local models and uses `SWITCHBOARD_OLLAMA_MODEL` as `defaultModel` when it is set; otherwise it falls back to the first discovered model.
-- Codex, Claude Code, and OpenCode currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
+- Codex and Claude Code currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
+- OpenCode can expose its available models from the CLI. You can also force a specific model with `SWITCHBOARD_OPENCODE_MODEL`, including free hosted OpenCode models such as `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free` for users who do not have or do not want to provide a paid AI subscription.
 - Providers without a stable machine-readable model listing mechanism leave `models` undefined when nothing is configured.
 
 The HTTP `GET /discover` endpoint is intentionally slimmer than the library API:
