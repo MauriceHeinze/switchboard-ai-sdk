@@ -50,7 +50,6 @@ async function startServer(overrides = {}) {
   };
 
   const server = createSwitchboardServer({
-    token: "test-token",
     maxTimeoutMs: 50
   });
 
@@ -90,18 +89,11 @@ test("GET /health returns server liveness without auth", async () => {
   }
 });
 
-test("GET /discover requires auth and returns tools", async () => {
+test("GET /discover returns tools", async () => {
   const server = await startServer();
 
   try {
-    const unauthorized = await fetch(createUrl(server, "/discover"));
-    assert.equal(unauthorized.status, 401);
-
-    const response = await fetch(createUrl(server, "/discover"), {
-      headers: {
-        authorization: "Bearer test-token"
-      }
-    });
+    const response = await fetch(createUrl(server, "/discover"));
     const body = await response.json();
 
     assert.equal(response.status, 200);
@@ -145,11 +137,7 @@ test("GET /health/:toolId reports unavailable tools", async () => {
   });
 
   try {
-    const response = await fetch(createUrl(server, "/health/codex"), {
-      headers: {
-        authorization: "Bearer test-token"
-      }
-    });
+    const response = await fetch(createUrl(server, "/health/codex"));
     const body = await response.json();
 
     assert.equal(response.status, 200);
@@ -167,7 +155,6 @@ test("POST /call/:toolId forwards prompt calls", async () => {
     const response = await fetch(createUrl(server, "/call/codex"), {
       method: "POST",
       headers: {
-        authorization: "Bearer test-token",
         "content-type": "application/json"
       },
       body: JSON.stringify({
@@ -213,7 +200,6 @@ test("POST /call/:toolId falls back to the default model when the requested mode
     const response = await fetch(createUrl(server, "/call/codex"), {
       method: "POST",
       headers: {
-        authorization: "Bearer test-token",
         "content-type": "application/json"
       },
       body: JSON.stringify({
@@ -261,7 +247,6 @@ test("POST /call/:toolId returns timeout errors", async () => {
     const response = await fetch(createUrl(server, "/call/codex"), {
       method: "POST",
       headers: {
-        authorization: "Bearer test-token",
         "content-type": "application/json"
       },
       body: JSON.stringify({
@@ -285,7 +270,6 @@ test("POST /call/:toolId validates the request body", async () => {
     const response = await fetch(createUrl(server, "/call/codex"), {
       method: "POST",
       headers: {
-        authorization: "Bearer test-token",
         "content-type": "application/json"
       },
       body: JSON.stringify({

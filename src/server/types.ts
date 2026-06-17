@@ -46,14 +46,12 @@ export type ToolOperationOptions = {
 export type SwitchboardServerOptions = {
   host?: string;
   port?: number;
-  token?: string;
   maxTimeoutMs?: number;
 };
 
 export type StartedSwitchboardServer = {
   host: string;
   port: number;
-  token: string;
   url: string;
   close(): Promise<void>;
 };

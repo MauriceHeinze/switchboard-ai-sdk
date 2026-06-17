@@ -1,5 +1,4 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { randomBytes } from "node:crypto";
 import { URL } from "node:url";
 import { discoverTools, checkToolHealth, callTool } from "./service.js";
 import {
@@ -26,10 +25,6 @@ type JsonError = {
     message: string;
   };
 };
-
-function createToken(): string {
-  return randomBytes(24).toString("hex");
-}
 
 function writeJson(
   response: ServerResponse,
@@ -74,16 +69,6 @@ function toDiscoverToolSummary(tool: {
         name: tool.name,
         available: tool.available
       };
-}
-
-function getBearerToken(request: IncomingMessage): string | undefined {
-  const authorization = request.headers.authorization;
-
-  if (!authorization?.startsWith("Bearer ")) {
-    return undefined;
-  }
-
-  return authorization.slice("Bearer ".length);
 }
 
 function getToolId(pathname: string): ProviderId | undefined {
@@ -224,7 +209,6 @@ export function createSwitchboardServer(
   options: SwitchboardServerOptions = {}
 ): Server {
   const host = options.host ?? DEFAULT_HOST;
-  const token = options.token ?? createToken();
   const maxTimeoutMs = options.maxTimeoutMs ?? DEFAULT_MAX_TIMEOUT_MS;
   const startedAt = Date.now();
 
@@ -238,13 +222,6 @@ export function createSwitchboardServer(
         version: "0.1.0",
         uptimeMs: Date.now() - startedAt
       });
-      return;
-    }
-
-    const requestToken = getBearerToken(request);
-
-    if (requestToken !== token) {
-      writeError(response, 401, "unauthorized", "Missing or invalid bearer token.");
       return;
     }
 
@@ -299,8 +276,6 @@ export function createSwitchboardServer(
     }
   });
 
-  Reflect.set(server, "switchboardToken", token);
-
   return server;
 }
 
@@ -325,12 +300,9 @@ export async function startSwitchboardServer(
     throw new Error("Unable to determine server address.");
   }
 
-  const token = Reflect.get(server, "switchboardToken") as string;
-
   return {
     host,
     port: address.port,
-    token,
     url: `http://${host}:${address.port}`,
     close: () =>
       new Promise<void>((resolve, reject) => {

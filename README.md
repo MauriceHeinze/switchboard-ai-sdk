@@ -165,7 +165,6 @@ const server = await startSwitchboardServer({
 });
 
 console.log(server.url);
-console.log(server.token);
 ```
 
 Endpoints:
@@ -175,11 +174,8 @@ Endpoints:
 - `POST /call/:toolId`
 - `GET /health/:toolId`
 
-Authenticated requests use a bearer token:
-
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://127.0.0.1:3000/discover
+curl http://127.0.0.1:3000/discover
 ```
 
 ## Environment Variables
