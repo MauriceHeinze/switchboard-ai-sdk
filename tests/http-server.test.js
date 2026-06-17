@@ -309,7 +309,7 @@ test("POST /auth/:toolId returns started for provider login flows", async () => 
       return {
         status: "started",
         authenticated: false,
-        command: "codex login --device-auth",
+        command: "codex login",
         instructions: "Visit https://example.com/device",
         output: "Visit https://example.com/device"
       };
@@ -324,7 +324,7 @@ test("POST /auth/:toolId returns started for provider login flows", async () => 
 
     assert.equal(response.status, 200);
     assert.equal(body.status, "started");
-    assert.equal(body.command, "codex login --device-auth");
+    assert.equal(body.command, "codex login");
     assert.match(body.instructions, /example\.com\/device/);
   } finally {
     await stopServer(serverState);

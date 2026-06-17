@@ -129,7 +129,7 @@ test("codexProvider.startAuth returns a valid result shape", async () => {
     ["already_authenticated", "started", "failed"].includes(result.status),
     `Unexpected status: ${result.status}`
   );
-  assert.equal(result.command, "codex login --device-auth");
+  assert.equal(result.command, "codex login");
   assert.ok(typeof result.authenticated === "boolean" || result.authenticated === null);
 });
 

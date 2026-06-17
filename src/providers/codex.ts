@@ -41,7 +41,7 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
 const AUTH_STATUS_COMMAND = ["login", "status"] as const;
-const AUTH_START_COMMAND = ["login", "--device-auth"] as const;
+const AUTH_START_COMMAND = ["login"] as const;
 const ALLOWED_SANDBOX_MODES = new Set([
   "read-only",
   "workspace-write",

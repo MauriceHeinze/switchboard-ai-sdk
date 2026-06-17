@@ -1,6 +1,6 @@
 {
   "name": "switchboard-ai-sdk",
-  "version": "0.1.2",
+  "version": "0.1.5",
   "description": "A unified JavaScript SDK for connecting local applications to AI coding tools like Codex, Claude Code, OpenCode, and Ollama to save you API costs.",
   "type": "module",
   "main": "./dist/index.js",
