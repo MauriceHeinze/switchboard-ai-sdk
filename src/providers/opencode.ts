@@ -55,13 +55,13 @@ async function listAvailableModels(): Promise<string[] | undefined> {
   return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
 }
 
-function buildOpenCodeArgs(input: { prompt: string; model?: string }): string[] {
+export function buildOpenCodeArgs(input: { prompt: string; model?: string }): string[] {
   const args = ["run", "--format", "json"];
 
-  const configuredModel = getConfiguredOpenCodeModel();
+  const selectedModel = input.model ?? getConfiguredOpenCodeModel();
 
-  if (configuredModel) {
-    args.push("--model", configuredModel);
+  if (selectedModel) {
+    args.push("--model", selectedModel);
   }
 
   args.push("--", input.prompt);

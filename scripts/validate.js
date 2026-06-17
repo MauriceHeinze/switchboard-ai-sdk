@@ -134,6 +134,43 @@ async function main() {
       console.log("\nchat/codex\nSkipped because Codex is unavailable.");
     }
 
+    if (availabilityByName.get("OpenCode")) {
+      const opencodeCall = await request(
+        "/chat/opencode",
+        createPost({ messages: [{ role: "user", content: prompt }], timeoutMs })
+      );
+      assert.equal(opencodeCall.status, 200, "/chat/opencode must return HTTP 200 when OpenCode is available.");
+      assert.equal(opencodeCall.body?.toolId, "opencode");
+      assert.equal(opencodeCall.body?.type, "agent");
+      assert.equal(typeof opencodeCall.body?.latencyMs, "number");
+      assert.equal(typeof opencodeCall.body?.result?.message?.content, "string");
+
+      logStep("chat/opencode", opencodeCall.body);
+
+      const opencodeFallback = await request(
+        "/chat/opencode",
+        createPost({
+          messages: [{ role: "user", content: prompt }],
+          model: unavailableModel,
+          timeoutMs
+        })
+      );
+      assert.equal(
+        opencodeFallback.status,
+        200,
+        "/chat/opencode must support model fallback when OpenCode is available."
+      );
+      assert.equal(opencodeFallback.body?.toolId, "opencode");
+      assert.ok(
+        Array.isArray(opencodeFallback.body?.warnings),
+        "Fallback response must include warnings."
+      );
+      assert.equal(typeof opencodeFallback.body?.result?.message?.content, "string");
+      logStep("chat/opencode fallback", opencodeFallback.body);
+    } else {
+      console.log("\nchat/opencode\nSkipped because OpenCode is unavailable.");
+    }
+
     if (availabilityByName.get("Ollama")) {
       const ollamaCall = await request(
         "/chat/ollama",

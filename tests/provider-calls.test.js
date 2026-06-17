@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseClaudeCodeJsonOutput } from "../dist/providers/claude-code.js";
 import { parseCodexExecJsonOutput } from "../dist/providers/codex.js";
-import { parseOpenCodeJsonOutput } from "../dist/providers/opencode.js";
+import {
+  buildOpenCodeArgs,
+  parseOpenCodeJsonOutput
+} from "../dist/providers/opencode.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
 
 test("parseCodexExecJsonOutput extracts the final agent message and usage", () => {
@@ -175,6 +178,25 @@ test("parseOpenCodeJsonOutput throws when no text events", () => {
       ),
     /did not return a text response/
   );
+});
+
+test("buildOpenCodeArgs uses the selected model when provided", () => {
+  const originalModel = process.env.SWITCHBOARD_OPENCODE_MODEL;
+  process.env.SWITCHBOARD_OPENCODE_MODEL = "configured-model";
+
+  try {
+    assert.deepEqual(buildOpenCodeArgs({ prompt: "hello", model: "o3-mini" }), [
+      "run",
+      "--format",
+      "json",
+      "--model",
+      "o3-mini",
+      "--",
+      "hello"
+    ]);
+  } finally {
+    process.env.SWITCHBOARD_OPENCODE_MODEL = originalModel;
+  }
 });
 
 test("ollamaProvider chat uses the discovered default model", async () => {
