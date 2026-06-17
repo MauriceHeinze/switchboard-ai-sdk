@@ -15,6 +15,7 @@ import type {
   ToolInvocationOptions
 } from "../types.js";
 import type { CallToolOptions, CallToolRequest, CallToolResponse, ToolHealthResult, ToolOperationOptions } from "./types.js";
+import { resolveRequestedModel } from "../providers/model-discovery.js";
 
 function nowIsoString(): string {
   return new Date().toISOString();
@@ -193,20 +194,27 @@ export async function callTool(
 
   const tool = await withTimeout(connect(toolId), options.timeoutMs);
   assertToolSupportsRequest(tool, input);
+  const modelSelection = resolveRequestedModel(discoveredTool, input.model);
+  const invocationInput = {
+    ...input,
+    model: modelSelection.model
+  } as CallToolRequest;
 
-  const result = isChatInput(input)
+  const result = isChatInput(invocationInput)
     ? await withAbortableTimeout(
-        (invocationOptions) => tool.chat!(input, invocationOptions),
+        (invocationOptions) => tool.chat!(invocationInput, invocationOptions),
         options.timeoutMs
       )
     : await withAbortableTimeout(
-        (invocationOptions) => tool.run!(input, invocationOptions),
+        (invocationOptions) => tool.run!(invocationInput, invocationOptions),
         options.timeoutMs
       );
 
   return {
     toolId,
     type: tool.type,
+    model: modelSelection.model,
+    warnings: modelSelection.warnings.length > 0 ? modelSelection.warnings : undefined,
     result,
     latencyMs: Date.now() - startedAt
   };

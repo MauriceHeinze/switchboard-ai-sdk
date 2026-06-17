@@ -11,6 +11,7 @@ import {
 import type { ChatInput, ProviderId } from "../types.js";
 import type {
   CallToolRequest,
+  DiscoverToolSummary,
   DiscoverResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions
@@ -55,6 +56,24 @@ function writeError(
       message
     }
   } satisfies JsonError);
+}
+
+function toDiscoverToolSummary(tool: {
+  id: string;
+  name: string;
+  available: boolean;
+  models?: string[];
+}): DiscoverToolSummary {
+  return tool.id === "ollama"
+    ? {
+        name: tool.name,
+        available: tool.available,
+        models: tool.models ?? []
+      }
+    : {
+        name: tool.name,
+        available: tool.available
+      };
 }
 
 function getBearerToken(request: IncomingMessage): string | undefined {
@@ -123,14 +142,24 @@ function validateCallRequest(body: unknown): CallToolRequest {
       throw new TypeError("messages must be an array of { role, content } items.");
     }
 
+    if (input.model !== undefined && typeof input.model !== "string") {
+      throw new TypeError("model must be a string when provided.");
+    }
+
     return {
-      messages: input.messages
+      messages: input.messages,
+      model: typeof input.model === "string" ? input.model : undefined
     };
   }
 
   if (typeof input.prompt === "string") {
+    if (input.model !== undefined && typeof input.model !== "string") {
+      throw new TypeError("model must be a string when provided.");
+    }
+
     return {
-      prompt: input.prompt
+      prompt: input.prompt,
+      model: typeof input.model === "string" ? input.model : undefined
     };
   }
 
@@ -223,7 +252,9 @@ export function createSwitchboardServer(
       if (method === "GET" && url.pathname === "/discover") {
         const tools = await discoverTools();
 
-        writeJson(response, 200, { tools } satisfies DiscoverResponse);
+        writeJson(response, 200, {
+          tools: tools.map(toDiscoverToolSummary)
+        } satisfies DiscoverResponse);
         return;
       }
 

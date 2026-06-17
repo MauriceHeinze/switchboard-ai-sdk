@@ -26,6 +26,7 @@ export type DiscoveredTool = {
 
 export type AgentRunInput = {
   prompt: string;
+  model?: string;
 };
 
 export type ChatInput = {
@@ -33,6 +34,7 @@ export type ChatInput = {
     role: "system" | "user" | "assistant";
     content: string;
   }>;
+  model?: string;
 };
 
 export type ToolInvocationOptions = {

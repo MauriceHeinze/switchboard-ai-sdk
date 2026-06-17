@@ -1,4 +1,4 @@
-import type { AgentRunInput, ChatInput, DiscoveredTool, ProviderId, ToolType } from "../types.js";
+import type { AgentRunInput, ChatInput, ProviderId, ToolType } from "../types.js";
 
 export type ToolHealthStatus = "healthy" | "unavailable" | "timeout" | "error";
 
@@ -12,8 +12,14 @@ export type ToolHealthResult = {
   checkedAt: string;
 };
 
+export type DiscoverToolSummary = {
+  name: string;
+  available: boolean;
+  models?: string[];
+};
+
 export type DiscoverResponse = {
-  tools: DiscoveredTool[];
+  tools: DiscoverToolSummary[];
 };
 
 export type HealthResponse = ToolHealthResult;
@@ -23,6 +29,8 @@ export type CallToolRequest = AgentRunInput | ChatInput;
 export type CallToolResponse = {
   toolId: ProviderId;
   type: ToolType;
+  model?: string;
+  warnings?: string[];
   result: unknown;
   latencyMs: number;
 };
