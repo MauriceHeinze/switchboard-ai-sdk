@@ -46,19 +46,42 @@ async function main() {
   console.log("MODELS");
   console.log("─".repeat(70));
 
+  const modelEnvVars = {
+    "claude-code": "SWITCHBOARD_CLAUDE_CODE_MODEL",
+    codex: "SWITCHBOARD_CODEX_MODEL",
+    ollama: "SWITCHBOARD_OLLAMA_MODEL",
+    opencode: "SWITCHBOARD_OPENCODE_MODEL"
+  };
+
   for (const tool of tools) {
     const models = tool.models ?? [];
     const defaultModel = tool.defaultModel;
+    const envVar = modelEnvVars[tool.id];
+    const configuredModel = envVar ? process.env[envVar] : undefined;
+
+    console.log(`  ${tool.name}:`);
+
+    if (envVar) {
+      const configStatus = configuredModel
+        ? `set to "${configuredModel}"`
+        : "not set";
+      console.log(`    Config: ${envVar} (${configStatus})`);
+    }
 
     if (models.length === 0) {
-      console.log(`  ${tool.name}: no models listed`);
+      console.log(`    Models: none discovered`);
+      if (!configuredModel) {
+        console.log(`    Note: will use provider's default model`);
+      }
     } else {
-      console.log(`  ${tool.name}:`);
+      console.log(`    Models:`);
       for (const model of models) {
         const marker = model === defaultModel ? " (default)" : "";
-        console.log(`    - ${model}${marker}`);
+        console.log(`      - ${model}${marker}`);
       }
     }
+
+    console.log();
   }
 
   console.log();
