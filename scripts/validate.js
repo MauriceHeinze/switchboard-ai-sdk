@@ -5,12 +5,92 @@ const timeoutMs = Number(process.env.SWITCHBOARD_VALIDATE_TIMEOUT_MS ?? 30000);
 const prompt = "Reply with a short list of 5 ideas.";
 const knownProviderIds = ["claude-code", "codex", "ollama", "opencode"];
 const unavailableModel = "switchboard-this-model-should-not-exist";
+const knownAuthStatuses = new Set([
+  "authenticated",
+  "unauthenticated",
+  "not_supported",
+  "unknown"
+]);
 
 function logStep(label, details) {
   console.log(`\n${label}`);
 
   if (details !== undefined) {
     console.log(JSON.stringify(details, null, 2));
+  }
+}
+
+function assertAuthState(toolId, health) {
+  assert.equal(typeof health.authSupported, "boolean");
+  assert.ok(
+    knownAuthStatuses.has(health.authStatus),
+    `${toolId} returned an unknown authStatus: ${health.authStatus}`
+  );
+
+  if (health.authSupported) {
+    assert.ok(
+      health.authenticated === true ||
+        health.authenticated === false ||
+        health.authenticated === null,
+      `${toolId} authenticated must be true, false, or null when auth is supported.`
+    );
+
+    if (health.authStatus === "authenticated") {
+      assert.equal(
+        health.authenticated,
+        true,
+        `${toolId} authStatus=authenticated must set authenticated=true.`
+      );
+    }
+
+    if (health.authStatus === "unauthenticated") {
+      assert.equal(
+        health.authenticated,
+        false,
+        `${toolId} authStatus=unauthenticated must set authenticated=false.`
+      );
+    }
+
+    if (health.authStatus === "unknown") {
+      assert.equal(
+        health.authenticated,
+        null,
+        `${toolId} authStatus=unknown should set authenticated=null.`
+      );
+    }
+  } else {
+    assert.equal(
+      health.authStatus,
+      "not_supported",
+      `${toolId} must report authStatus=not_supported when auth is unsupported.`
+    );
+    assert.equal(
+      health.authenticated,
+      null,
+      `${toolId} must report authenticated=null when auth is unsupported.`
+    );
+  }
+}
+
+function printAuthSummary(authResults) {
+  const toolIdWidth =
+    Math.max(...authResults.map(({ toolId }) => toolId.length), "tool".length) + 2;
+  const statusWidth =
+    Math.max(
+      ...authResults.map(({ authStatus }) => authStatus.length),
+      "authStatus".length
+    ) + 2;
+  const authWidth = "authenticated".length + 2;
+
+  console.log("\nauth summary");
+  console.log(
+    `${"tool".padEnd(toolIdWidth)}${"authStatus".padEnd(statusWidth)}${"authenticated".padEnd(authWidth)}reason`
+  );
+
+  for (const result of authResults) {
+    console.log(
+      `${result.toolId.padEnd(toolIdWidth)}${result.authStatus.padEnd(statusWidth)}${String(result.authenticated).padEnd(authWidth)}${result.reason ?? "-"}`
+    );
   }
 }
 
@@ -77,9 +157,8 @@ async function main() {
 
     logStep("discover", discover.body);
 
-    const availabilityByName = new Map(
-      discover.body.tools.map((tool) => [tool.name, tool.available])
-    );
+    const authResults = [];
+    const healthByProviderId = new Map();
 
     for (const providerId of knownProviderIds) {
       const health = await request(`/health/${providerId}?timeoutMs=${timeoutMs}`);
@@ -88,9 +167,14 @@ async function main() {
       assert.equal(typeof health.body?.status, "string");
       assert.equal(typeof health.body?.available, "boolean");
       assert.equal(typeof health.body?.latencyMs, "number");
+      assertAuthState(providerId, health.body);
+      authResults.push(health.body);
+      healthByProviderId.set(providerId, health.body);
 
       logStep(`health/${providerId}`, health.body);
     }
+
+    printAuthSummary(authResults);
 
     const unknownTool = await request("/health/not-a-tool");
     assert.equal(unknownTool.status, 404, "/health/not-a-tool must return HTTP 404.");
@@ -105,7 +189,7 @@ async function main() {
     assert.equal(invalidChat.body?.error?.code, "invalid_request");
     logStep("chat/codex invalid-request", invalidChat.body);
 
-    if (availabilityByName.get("Codex")) {
+    if (healthByProviderId.get("codex")?.status === "healthy") {
       const codexCall = await request(
         "/chat/codex",
         createPost({ messages: [{ role: "user", content: prompt }], timeoutMs })
@@ -132,10 +216,10 @@ async function main() {
       assert.equal(typeof codexFallback.body?.result?.message?.content, "string");
       logStep("chat/codex fallback", codexFallback.body);
     } else {
-      console.log("\nchat/codex\nSkipped because Codex is unavailable.");
+      console.log("\nchat/codex\nSkipped because Codex is not healthy and ready for requests.");
     }
 
-    if (availabilityByName.get("OpenCode")) {
+    if (healthByProviderId.get("opencode")?.status === "healthy") {
       const opencodeCall = await request(
         "/chat/opencode",
         createPost({ messages: [{ role: "user", content: prompt }], timeoutMs })
@@ -169,10 +253,10 @@ async function main() {
       assert.equal(typeof opencodeFallback.body?.result?.message?.content, "string");
       logStep("chat/opencode fallback", opencodeFallback.body);
     } else {
-      console.log("\nchat/opencode\nSkipped because OpenCode is unavailable.");
+      console.log("\nchat/opencode\nSkipped because OpenCode is not healthy and ready for requests.");
     }
 
-    if (availabilityByName.get("Ollama")) {
+    if (healthByProviderId.get("ollama")?.status === "healthy") {
       const ollamaCall = await request(
         "/chat/ollama",
         createPost({
@@ -199,7 +283,7 @@ async function main() {
       assert.equal(ollamaInvalidMessages.body?.error?.code, "invalid_request");
       logStep("chat/ollama invalid-messages", ollamaInvalidMessages.body);
     } else {
-      console.log("\nchat/ollama\nSkipped because Ollama is unavailable.");
+      console.log("\nchat/ollama\nSkipped because Ollama is not healthy and ready for requests.");
     }
 
     console.log("\nvalidate: OK");
