@@ -4,4 +4,9 @@
 
 # Examples
 
-Example integrations can live here, starting with an Electron main-process example.
+Example integrations live here. They all follow the same core flow:
+
+1. discover an available tool
+2. connect to that tool
+3. send a prompt
+4. read `response.message.content`

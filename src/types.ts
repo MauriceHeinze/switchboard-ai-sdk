@@ -42,6 +42,17 @@ export type ToolInvocationOptions = {
   timeoutMs?: number;
 };
 
+export type ToolMessage = {
+  role: "assistant";
+  content: string;
+};
+
+export type ToolResult = {
+  message: ToolMessage;
+  usage?: Record<string, number>;
+  metadata?: Record<string, unknown>;
+};
+
 export type ConnectedTool = {
   id: ProviderId;
   name: string;
@@ -50,8 +61,8 @@ export type ConnectedTool = {
   models?: string[];
   defaultModel?: string;
   health(options?: ToolInvocationOptions): Promise<boolean>;
-  run?(input: AgentRunInput, options?: ToolInvocationOptions): Promise<unknown>;
-  chat?(input: ChatInput, options?: ToolInvocationOptions): Promise<unknown>;
+  run?(input: AgentRunInput, options?: ToolInvocationOptions): Promise<ToolResult>;
+  chat?(input: ChatInput, options?: ToolInvocationOptions): Promise<ToolResult>;
 };
 
 export type ConnectByCapabilityOptions = {

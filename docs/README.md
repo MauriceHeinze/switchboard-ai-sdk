@@ -6,7 +6,78 @@
 
 switchboard-ai is an open-source npm package for connecting apps to local AI tools through one unified API.
 
-This documentation area is for usage guides, provider setup notes, Electron-focused integration details, and security considerations for agentic local tools like Claude Code, Codex, and Ollama.
+It is designed for developers who want an API-shaped integration but prefer to use local tools they already have instead of paying for hosted LLM APIs on every request.
+
+This documentation area focuses on three things:
+
+- how to connect to an available tool
+- how to send a prompt
+- what the response looks like
+
+## Connect to an available tool
+
+This is the same basic pattern you would use with a traditional provider SDK: pick a tool, connect, send input, read the response.
+
+```ts
+import { connect, discover } from "switchboard-ai";
+
+const tools = await discover();
+const toolId = tools.find((tool) => tool.available)?.id;
+
+if (!toolId) {
+  throw new Error("No local AI tool is available.");
+}
+
+const tool = await connect(toolId);
+```
+
+## Send a prompt
+
+Use `run()` for prompt-style tools:
+
+```ts
+const response = await tool.run?.({
+  prompt: "Generate me a list of five healthy lunch ideas."
+});
+
+console.log(response?.message.content);
+```
+
+Use `chat()` for chat-style tools:
+
+```ts
+const response = await tool.chat?.({
+  messages: [
+    {
+      role: "user",
+      content: "Generate me a list of five healthy lunch ideas."
+    }
+  ]
+});
+
+console.log(response?.message.content);
+```
+
+## Response shape
+
+All tool calls return the same result format:
+
+```ts
+{
+  message: {
+    role: "assistant",
+    content: "..."
+  },
+  usage: {
+    // optional numeric provider metrics
+  },
+  metadata: {
+    // optional provider-specific details
+  }
+}
+```
+
+If you use `callTool()`, the unified result is returned inside `response.result`.
 
 ## Discover available models
 
@@ -48,11 +119,12 @@ If the requested model is known to be unavailable and the provider has a `defaul
 const response = await callTool(
   "codex",
   {
-    prompt: "Summarize this repository",
+    prompt: "Generate me a list of five healthy lunch ideas.",
     model: "gpt-5.5"
   }
 );
 
 console.log(response.model);
 console.log(response.warnings ?? []);
+console.log(response.result.message.content);
 ```

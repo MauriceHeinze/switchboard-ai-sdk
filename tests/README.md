@@ -4,4 +4,4 @@
 
 # Tests
 
-Unit and integration tests should be organized here as the provider implementations solidify.
+Unit and integration tests live here, including coverage for provider discovery, prompt execution, and the shared response format.
