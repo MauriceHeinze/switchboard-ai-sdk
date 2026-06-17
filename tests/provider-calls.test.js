@@ -104,6 +104,24 @@ test("parseClaudeCodeAuthStatusOutput parses authenticated JSON", () => {
   });
 });
 
+test("parseClaudeCodeAuthStatusOutput parses unauthenticated JSON", () => {
+  const output = JSON.stringify({
+    loggedIn: false,
+    authMethod: "none",
+    apiProvider: "firstParty"
+  });
+  const result = parseClaudeCodeAuthStatusOutput(output);
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: false,
+    authStatus: "unauthenticated",
+    reason: "Claude Code requires authentication before it can handle requests.",
+    command: "claude auth status --json",
+    output
+  });
+});
+
 test("parseOpenCodeJsonOutput extracts text events", () => {
   const result = parseOpenCodeJsonOutput([
     JSON.stringify({

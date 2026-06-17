@@ -41,6 +41,13 @@ export async function executeCommand(
           const timedOut =
             "killed" in error && error.killed && options.timeoutMs !== undefined;
 
+          if (typeof error === "object" && error !== null) {
+            Object.assign(error, {
+              stdout: stdout.trim(),
+              stderr: stderr.trim()
+            });
+          }
+
           reject(timedOut ? new TimeoutError() : error);
           return;
         }

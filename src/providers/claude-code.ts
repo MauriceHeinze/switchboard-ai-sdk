@@ -126,6 +126,19 @@ function getProcessStderr(error: unknown): string {
   return "";
 }
 
+function getProcessStdout(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "stdout" in error &&
+    typeof error.stdout === "string"
+  ) {
+    return error.stdout;
+  }
+
+  return "";
+}
+
 function isClaudeCodeAuthError(stderr: string): boolean {
   return /auth|login|api[_ -]?key|not logged in|unauthorized/i.test(stderr);
 }
@@ -197,7 +210,17 @@ async function checkClaudeCodeAuth(
       [stdout, stderr].filter(Boolean).join("\n")
     );
   } catch (error) {
+    const stdout = getProcessStdout(error);
     const stderr = getProcessStderr(error);
+    const combinedOutput = [stdout, stderr].filter(Boolean).join("\n");
+
+    if (combinedOutput) {
+      const parsed = parseClaudeCodeAuthStatusOutput(combinedOutput);
+
+      if (parsed.authStatus !== "unknown") {
+        return parsed;
+      }
+    }
 
     if (isClaudeCodeAuthError(stderr)) {
       return unauthenticatedAuth(
@@ -209,7 +232,7 @@ async function checkClaudeCodeAuth(
 
     return unknownAuth(
       getClaudeAuthCommand(AUTH_STATUS_COMMAND),
-      stderr || toErrorMessage(error)
+      combinedOutput || toErrorMessage(error)
     );
   }
 }
