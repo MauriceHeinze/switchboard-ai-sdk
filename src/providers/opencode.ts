@@ -7,7 +7,7 @@ import {
 } from "../errors/errors.js";
 import type { ProviderDefinition } from "../discovery/types.js";
 import type {
-  AgentRunInput,
+  ChatInput,
   ConnectedTool,
   DiscoveredTool,
   ToolInvocationOptions
@@ -17,12 +17,13 @@ import {
   getConfiguredModelInfo,
   resolveRequestedModel
 } from "./model-discovery.js";
+import { chatInputToPrompt } from "./chat-prompt.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "opencode",
   name: "OpenCode",
   type: "agent",
-  capabilities: ["agent-task", "code-analysis", "code-edit", "health-check"]
+  capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
 
@@ -54,7 +55,7 @@ async function listAvailableModels(): Promise<string[] | undefined> {
   return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
 }
 
-function buildOpenCodeArgs(input: AgentRunInput): string[] {
+function buildOpenCodeArgs(input: { prompt: string; model?: string }): string[] {
   const args = ["run", "--format", "json"];
 
   const configuredModel = getConfiguredOpenCodeModel();
@@ -193,13 +194,13 @@ export const opencodeProvider: ProviderDefinition = {
       async health() {
         return true;
       },
-      async run(input, options: ToolInvocationOptions = {}) {
+      async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "opencode",
             buildOpenCodeArgs({
-              ...input,
+              prompt: chatInputToPrompt(input),
               model: selection.model
             }),
             {

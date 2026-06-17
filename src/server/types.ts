@@ -1,4 +1,4 @@
-import type { AgentRunInput, ChatInput, ProviderId, ToolResult, ToolType } from "../types.js";
+import type { ChatInput, ProviderId, ToolResult, ToolType } from "../types.js";
 
 export type ToolHealthStatus = "healthy" | "unavailable" | "timeout" | "error";
 
@@ -24,9 +24,9 @@ export type DiscoverResponse = {
 
 export type HealthResponse = ToolHealthResult;
 
-export type CallToolRequest = AgentRunInput | ChatInput;
+export type ChatToolRequest = ChatInput;
 
-export type CallToolResponse = {
+export type ChatToolResponse = {
   toolId: ProviderId;
   type: ToolType;
   model?: string;
@@ -35,7 +35,7 @@ export type CallToolResponse = {
   latencyMs: number;
 };
 
-export type CallToolOptions = {
+export type ChatToolOptions = {
   timeoutMs?: number;
 };
 

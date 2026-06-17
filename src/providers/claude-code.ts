@@ -7,7 +7,7 @@ import {
 } from "../errors/errors.js";
 import type { ProviderDefinition } from "../discovery/types.js";
 import type {
-  AgentRunInput,
+  ChatInput,
   ConnectedTool,
   DiscoveredTool,
   ToolInvocationOptions
@@ -16,12 +16,13 @@ import {
   getConfiguredClaudeCodeModel,
   resolveRequestedModel
 } from "./model-discovery.js";
+import { chatInputToPrompt } from "./chat-prompt.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "claude-code",
   name: "Claude Code",
   type: "agent",
-  capabilities: ["agent-task", "code-analysis", "code-edit", "health-check"]
+  capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
 
@@ -53,7 +54,7 @@ function getMaxTurns(): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function buildClaudeCodeArgs(input: AgentRunInput): string[] {
+function buildClaudeCodeArgs(input: { prompt: string; model?: string }): string[] {
   const args = ["-p", "--output-format", "json", "--verbose"];
 
   const configuredModel = input.model;
@@ -199,13 +200,13 @@ export const claudeCodeProvider: ProviderDefinition = {
       async health() {
         return true;
       },
-      async run(input, options: ToolInvocationOptions = {}) {
+      async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "claude",
             buildClaudeCodeArgs({
-              ...input,
+              prompt: chatInputToPrompt(input),
               model: selection.model
             }),
             {

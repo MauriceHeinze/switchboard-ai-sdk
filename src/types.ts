@@ -24,11 +24,6 @@ export type DiscoveredTool = {
   metadata?: Record<string, unknown>;
 };
 
-export type AgentRunInput = {
-  prompt: string;
-  model?: string;
-};
-
 export type ChatInput = {
   messages: Array<{
     role: "system" | "user" | "assistant";
@@ -61,8 +56,7 @@ export type ConnectedTool = {
   models?: string[];
   defaultModel?: string;
   health(options?: ToolInvocationOptions): Promise<boolean>;
-  run?(input: AgentRunInput, options?: ToolInvocationOptions): Promise<ToolResult>;
-  chat?(input: ChatInput, options?: ToolInvocationOptions): Promise<ToolResult>;
+  chat(input: ChatInput, options?: ToolInvocationOptions): Promise<ToolResult>;
 };
 
 export type ConnectByCapabilityOptions = {

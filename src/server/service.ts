@@ -14,15 +14,11 @@ import type {
   ProviderId,
   ToolInvocationOptions
 } from "../types.js";
-import type { CallToolOptions, CallToolRequest, CallToolResponse, ToolHealthResult, ToolOperationOptions } from "./types.js";
+import type { ChatToolOptions, ChatToolRequest, ChatToolResponse, ToolHealthResult, ToolOperationOptions } from "./types.js";
 import { resolveRequestedModel } from "../providers/model-discovery.js";
 
 function nowIsoString(): string {
   return new Date().toISOString();
-}
-
-function isChatInput(input: CallToolRequest): input is ChatInput {
-  return "messages" in input;
 }
 
 async function withTimeout<T>(
@@ -165,21 +161,17 @@ export async function checkToolHealth(
   }
 }
 
-function assertToolSupportsRequest(tool: ConnectedTool, input: CallToolRequest): void {
-  if (isChatInput(input) && !tool.chat) {
+function assertToolSupportsChat(tool: ConnectedTool): void {
+  if (!tool.chat) {
     throw new ProviderExecutionError(tool.id, `${tool.name} does not support chat calls.`);
-  }
-
-  if (!isChatInput(input) && !tool.run) {
-    throw new ProviderExecutionError(tool.id, `${tool.name} does not support agent runs.`);
   }
 }
 
-export async function callTool(
+export async function chatWithTool(
   toolId: ProviderId,
-  input: CallToolRequest,
-  options: CallToolOptions = {}
-): Promise<CallToolResponse> {
+  input: ChatToolRequest,
+  options: ChatToolOptions = {}
+): Promise<ChatToolResponse> {
   const startedAt = Date.now();
   const discoveredTool = await withTimeout(getDiscoveredTool(toolId), options.timeoutMs);
 
@@ -193,22 +185,17 @@ export async function callTool(
   }
 
   const tool = await withTimeout(connect(toolId), options.timeoutMs);
-  assertToolSupportsRequest(tool, input);
+  assertToolSupportsChat(tool);
   const modelSelection = resolveRequestedModel(discoveredTool, input.model);
   const invocationInput = {
     ...input,
     model: modelSelection.model
-  } as CallToolRequest;
+  } as ChatInput;
 
-  const result = isChatInput(invocationInput)
-    ? await withAbortableTimeout(
-        (invocationOptions) => tool.chat!(invocationInput, invocationOptions),
-        options.timeoutMs
-      )
-    : await withAbortableTimeout(
-        (invocationOptions) => tool.run!(invocationInput, invocationOptions),
-        options.timeoutMs
-      );
+  const result = await withAbortableTimeout(
+    (invocationOptions) => tool.chat(invocationInput, invocationOptions),
+    options.timeoutMs
+  );
 
   return {
     toolId,

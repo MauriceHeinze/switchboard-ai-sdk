@@ -1,7 +1,7 @@
 export { connect } from "./connect.js";
 export { discover } from "./discovery/discover.js";
 export {
-  callTool,
+  chatWithTool,
   checkToolHealth,
   discoverTools
 } from "./server/service.js";
@@ -11,7 +11,6 @@ export {
 } from "./server/http.js";
 
 export type {
-  AgentRunInput,
   Capability,
   ChatInput,
   ConnectByCapabilityOptions,
@@ -24,9 +23,9 @@ export type {
   ToolType
 } from "./types.js";
 export type {
-  CallToolOptions,
-  CallToolRequest,
-  CallToolResponse,
+  ChatToolOptions,
+  ChatToolRequest,
+  ChatToolResponse,
   DiscoverResponse,
   HealthResponse,
   StartedSwitchboardServer,

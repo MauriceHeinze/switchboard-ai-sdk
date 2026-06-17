@@ -109,7 +109,7 @@ Current behavior:
 
 ## Run the Local HTTP Server
 
-You can expose discovery and tool calls over HTTP:
+You can expose discovery and chat over HTTP:
 
 ```ts
 import { startSwitchboardServer } from "switchboard-ai";
@@ -125,7 +125,7 @@ Endpoints:
 
 - `GET /health`
 - `GET /discover`
-- `POST /call/:toolId`
+- `POST /chat/:toolId`
 - `GET /health/:toolId`
 
 ```bash

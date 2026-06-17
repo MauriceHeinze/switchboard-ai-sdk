@@ -7,7 +7,7 @@ import {
 } from "../errors/errors.js";
 import type { ProviderDefinition } from "../discovery/types.js";
 import type {
-  AgentRunInput,
+  ChatInput,
   ConnectedTool,
   DiscoveredTool,
   ToolInvocationOptions
@@ -16,12 +16,13 @@ import {
   getConfiguredCodexModel,
   resolveRequestedModel
 } from "./model-discovery.js";
+import { chatInputToPrompt } from "./chat-prompt.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "codex",
   name: "Codex",
   type: "agent",
-  capabilities: ["agent-task", "code-analysis", "code-edit", "health-check"]
+  capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
 const ALLOWED_SANDBOX_MODES = new Set([
@@ -52,7 +53,7 @@ async function listAvailableModels(): Promise<string[] | undefined> {
   return configuredModel ? [configuredModel] : undefined;
 }
 
-function buildCodexExecArgs(input: AgentRunInput): string[] {
+function buildCodexExecArgs(input: { prompt: string; model?: string }): string[] {
   const args = [
     "exec",
     "--json",
@@ -196,13 +197,13 @@ export const codexProvider: ProviderDefinition = {
       async health() {
         return true;
       },
-      async run(input, options: ToolInvocationOptions = {}) {
+      async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
           const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "codex",
             buildCodexExecArgs({
-              ...input,
+              prompt: chatInputToPrompt(input),
               model: selection.model
             }),
             {

@@ -39,9 +39,9 @@ async function startServer(overrides = {}) {
         async health() {
           return true;
         },
-        async run(input) {
+        async chat(input) {
           return {
-            echoedPrompt: input.prompt
+            echoedMessages: input.messages
           };
         }
       };
@@ -148,17 +148,17 @@ test("GET /health/:toolId reports unavailable tools", async () => {
   }
 });
 
-test("POST /call/:toolId forwards prompt calls", async () => {
+test("POST /chat/:toolId forwards chat calls", async () => {
   const server = await startServer();
 
   try {
-    const response = await fetch(createUrl(server, "/call/codex"), {
+    const response = await fetch(createUrl(server, "/chat/codex"), {
       method: "POST",
       headers: {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        prompt: "hello"
+        messages: [{ role: "user", content: "hello" }]
       })
     });
     const body = await response.json();
@@ -166,14 +166,14 @@ test("POST /call/:toolId forwards prompt calls", async () => {
     assert.equal(response.status, 200);
     assert.equal(body.model, "gpt-5-codex");
     assert.deepEqual(body.result, {
-      echoedPrompt: "hello"
+      echoedMessages: [{ role: "user", content: "hello" }]
     });
   } finally {
     await stopServer(server);
   }
 });
 
-test("POST /call/:toolId falls back to the default model when the requested model is unavailable", async () => {
+test("POST /chat/:toolId falls back to the default model when the requested model is unavailable", async () => {
   const server = await startServer({
     async connect(tool) {
       return {
@@ -186,9 +186,9 @@ test("POST /call/:toolId falls back to the default model when the requested mode
         async health() {
           return true;
         },
-        async run(input) {
+        async chat(input) {
           return {
-            echoedPrompt: input.prompt,
+            echoedMessages: input.messages,
             usedModel: input.model
           };
         }
@@ -197,13 +197,13 @@ test("POST /call/:toolId falls back to the default model when the requested mode
   });
 
   try {
-    const response = await fetch(createUrl(server, "/call/codex"), {
+    const response = await fetch(createUrl(server, "/chat/codex"), {
       method: "POST",
       headers: {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        prompt: "hello",
+        messages: [{ role: "user", content: "hello" }],
         model: "gpt-5.5"
       })
     });
@@ -216,7 +216,7 @@ test("POST /call/:toolId falls back to the default model when the requested mode
       'Falling back to default model "gpt-5-codex".'
     ]);
     assert.deepEqual(body.result, {
-      echoedPrompt: "hello",
+      echoedMessages: [{ role: "user", content: "hello" }],
       usedModel: "gpt-5-codex"
     });
   } finally {
@@ -224,7 +224,7 @@ test("POST /call/:toolId falls back to the default model when the requested mode
   }
 });
 
-test("POST /call/:toolId returns timeout errors", async () => {
+test("POST /chat/:toolId returns timeout errors", async () => {
   const server = await startServer({
     async connect(tool) {
       return {
@@ -235,7 +235,7 @@ test("POST /call/:toolId returns timeout errors", async () => {
         async health() {
           return true;
         },
-        async run() {
+        async chat() {
           await new Promise((resolve) => setTimeout(resolve, 100));
           return "late";
         }
@@ -244,13 +244,13 @@ test("POST /call/:toolId returns timeout errors", async () => {
   });
 
   try {
-    const response = await fetch(createUrl(server, "/call/codex"), {
+    const response = await fetch(createUrl(server, "/chat/codex"), {
       method: "POST",
       headers: {
         "content-type": "application/json"
       },
       body: JSON.stringify({
-        prompt: "hello",
+        messages: [{ role: "user", content: "hello" }],
         timeoutMs: 10
       })
     });
@@ -263,11 +263,11 @@ test("POST /call/:toolId returns timeout errors", async () => {
   }
 });
 
-test("POST /call/:toolId validates the request body", async () => {
+test("POST /chat/:toolId validates the request body", async () => {
   const server = await startServer();
 
   try {
-    const response = await fetch(createUrl(server, "/call/codex"), {
+    const response = await fetch(createUrl(server, "/chat/codex"), {
       method: "POST",
       headers: {
         "content-type": "application/json"

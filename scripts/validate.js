@@ -87,37 +87,37 @@ async function main() {
 
     if (availabilityByName.get("Codex")) {
       const codexCall = await request(
-        "/call/codex",
-        createPost({ prompt, timeoutMs })
+        "/chat/codex",
+        createPost({ messages: [{ role: "user", content: prompt }], timeoutMs })
       );
-      assert.equal(codexCall.status, 200, "/call/codex must return HTTP 200 when Codex is available.");
+      assert.equal(codexCall.status, 200, "/chat/codex must return HTTP 200 when Codex is available.");
       assert.equal(codexCall.body?.toolId, "codex");
       assert.equal(codexCall.body?.type, "agent");
       assert.equal(typeof codexCall.body?.latencyMs, "number");
       assert.equal(typeof codexCall.body?.result?.message?.content, "string");
 
-      logStep("call/codex", codexCall.body);
+      logStep("chat/codex", codexCall.body);
     } else {
-      console.log("\ncall/codex\nSkipped because Codex is unavailable.");
+      console.log("\nchat/codex\nSkipped because Codex is unavailable.");
     }
 
     if (availabilityByName.get("Ollama")) {
       const ollamaCall = await request(
-        "/call/ollama",
+        "/chat/ollama",
         createPost({
           messages: [{ role: "user", content: prompt }],
           timeoutMs
         })
       );
-      assert.equal(ollamaCall.status, 200, "/call/ollama must return HTTP 200 when Ollama is available.");
+      assert.equal(ollamaCall.status, 200, "/chat/ollama must return HTTP 200 when Ollama is available.");
       assert.equal(ollamaCall.body?.toolId, "ollama");
       assert.equal(ollamaCall.body?.type, "runtime");
       assert.equal(typeof ollamaCall.body?.latencyMs, "number");
       assert.equal(typeof ollamaCall.body?.result?.message?.content, "string");
 
-      logStep("call/ollama", ollamaCall.body);
+      logStep("chat/ollama", ollamaCall.body);
     } else {
-      console.log("\ncall/ollama\nSkipped because Ollama is unavailable.");
+      console.log("\nchat/ollama\nSkipped because Ollama is unavailable.");
     }
 
     console.log("\nvalidate: OK");

@@ -1,6 +1,6 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { URL } from "node:url";
-import { discoverTools, checkToolHealth, callTool } from "./service.js";
+import { discoverTools, checkToolHealth, chatWithTool } from "./service.js";
 import {
   ProviderExecutionError,
   TimeoutError,
@@ -9,7 +9,7 @@ import {
 } from "../errors/errors.js";
 import type { ChatInput, ProviderId } from "../types.js";
 import type {
-  CallToolRequest,
+  ChatToolRequest,
   DiscoverToolSummary,
   DiscoverResponse,
   StartedSwitchboardServer,
@@ -100,7 +100,7 @@ function isChatInput(input: Record<string, unknown>): input is ChatInput {
   return Array.isArray(input.messages);
 }
 
-function validateCallRequest(body: unknown): CallToolRequest {
+function validateChatRequest(body: unknown): ChatToolRequest {
   if (!body || typeof body !== "object") {
     throw new TypeError("Request body must be a JSON object.");
   }
@@ -137,18 +137,7 @@ function validateCallRequest(body: unknown): CallToolRequest {
     };
   }
 
-  if (typeof input.prompt === "string") {
-    if (input.model !== undefined && typeof input.model !== "string") {
-      throw new TypeError("model must be a string when provided.");
-    }
-
-    return {
-      prompt: input.prompt,
-      model: typeof input.model === "string" ? input.model : undefined
-    };
-  }
-
-  throw new TypeError("Request body must include either prompt or messages.");
+  throw new TypeError("Request body must include messages.");
 }
 
 function getTimeoutMs(
@@ -253,7 +242,7 @@ export function createSwitchboardServer(
         return;
       }
 
-      if (method === "POST" && url.pathname.startsWith("/call/")) {
+      if (method === "POST" && url.pathname.startsWith("/chat/")) {
         const toolId = getToolId(url.pathname);
 
         if (!toolId) {
@@ -263,8 +252,8 @@ export function createSwitchboardServer(
 
         const body = await readJsonBody(request);
         const timeoutMs = getTimeoutMs(body, maxTimeoutMs);
-        const input = validateCallRequest(body);
-        const result = await callTool(toolId, input, { timeoutMs });
+        const input = validateChatRequest(body);
+        const result = await chatWithTool(toolId, input, { timeoutMs });
 
         writeJson(response, 200, result);
         return;
