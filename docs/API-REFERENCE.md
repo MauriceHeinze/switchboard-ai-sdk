@@ -4,7 +4,7 @@
 
 # API Reference
 
-Technical reference for `switchboard-ai`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md).
+Technical reference for `switchboard-ai`. The published npm package name is `switchboard-ai-sdk`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md).
 
 ## `tool.chat()` Response Shape
 
@@ -136,7 +136,7 @@ This is what the validator output looks like when local tools are available:
 `discover()` returns model information when a provider can expose it.
 
 ```ts
-import { discover } from "switchboard-ai";
+import { discover } from "switchboard-ai-sdk";
 
 const tools = await discover();
 

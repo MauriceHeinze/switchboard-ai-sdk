@@ -7,6 +7,7 @@
 `switchboard-ai` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
 This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md).
+The published npm package name is `switchboard-ai-sdk`.
 
 It discovers and connects to local AI tools like:
 
@@ -22,7 +23,7 @@ The goal is simple: use local AI tools through an interface that feels like a tr
 ## Install
 
 ```bash
-npm install switchboard-ai
+npm install switchboard-ai-sdk
 ```
 
 ## Quick Start
@@ -30,7 +31,7 @@ npm install switchboard-ai
 Discover the tools that are available on the current machine, pick one, connect, and send a prompt:
 
 ```ts
-import { connect, discover } from "switchboard-ai";
+import { connect, discover } from "switchboard-ai-sdk";
 
 const tools = await discover();
 const toolId = tools.find((tool) => tool.available)?.id;
@@ -71,7 +72,7 @@ This keeps the app flow simple: pass a prompt, get a response.
 When a provider can expose models, `discover()` returns them:
 
 ```ts
-import { discover } from "switchboard-ai";
+import { discover } from "switchboard-ai-sdk";
 
 const tools = await discover();
 
@@ -95,7 +96,7 @@ Current behavior:
 You can expose discovery and chat over HTTP:
 
 ```ts
-import { startSwitchboardServer } from "switchboard-ai";
+import { startSwitchboardServer } from "switchboard-ai-sdk";
 
 const server = await startSwitchboardServer({
   port: 3000
