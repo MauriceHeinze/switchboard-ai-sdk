@@ -114,7 +114,44 @@ This is what the validator output looks like when local tools are available:
 }
 ```
 
-### `tool.chat()`
+### `POST /chat/:toolId` request
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with a short list of 5 ideas."
+    }
+  ],
+  "timeoutMs": 30000
+}
+```
+
+### `POST /chat/:toolId` response
+
+```json
+{
+  "toolId": "codex",
+  "type": "agent",
+  "model": "gpt-5.4",
+  "result": {
+    "message": {
+      "role": "assistant",
+      "content": "1. Add a lightweight onboarding flow for first-time users.\n2. Surface AI action history with simple search and filters.\n3. Create a sandbox mode for testing automations safely.\n4. Add usage analytics with clear cost and time savings.\n5. Build reusable templates for common switchboard workflows."
+    },
+    "usage": {
+      "input_tokens": 16646,
+      "cached_input_tokens": 2432,
+      "output_tokens": 76,
+      "reasoning_output_tokens": 11
+    }
+  },
+  "latencyMs": 8086
+}
+```
+
+### `tool.chat()` response
 
 ```json
 {
