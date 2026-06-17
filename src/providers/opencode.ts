@@ -12,7 +12,11 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
-import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
+import {
+  getConfiguredModel,
+  getConfiguredModelInfo,
+  resolveRequestedModel
+} from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "opencode",
@@ -191,9 +195,13 @@ export const opencodeProvider: ProviderDefinition = {
       },
       async run(input, options: ToolInvocationOptions = {}) {
         try {
+          const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "opencode",
-            buildOpenCodeArgs(input),
+            buildOpenCodeArgs({
+              ...input,
+              model: selection.model
+            }),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

@@ -23,6 +23,8 @@ export type CallToolRequest = AgentRunInput | ChatInput;
 export type CallToolResponse = {
   toolId: ProviderId;
   type: ToolType;
+  model?: string;
+  warnings?: string[];
   result: unknown;
   latencyMs: number;
 };

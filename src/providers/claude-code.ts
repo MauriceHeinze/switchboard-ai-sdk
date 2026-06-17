@@ -12,7 +12,10 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
-import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
+import {
+  getConfiguredClaudeCodeModel,
+  resolveRequestedModel
+} from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "claude-code",
@@ -33,12 +36,9 @@ type ClaudeCodeJsonOutput = {
   session_id?: string;
 };
 
-function getConfiguredClaudeCodeModel(): string | undefined {
-  return getConfiguredModel("SWITCHBOARD_CLAUDE_CODE_MODEL");
-}
-
 async function listAvailableModels(): Promise<string[] | undefined> {
-  return getConfiguredModelInfo("SWITCHBOARD_CLAUDE_CODE_MODEL").models;
+  const configuredModel = await getConfiguredClaudeCodeModel();
+  return configuredModel ? [configuredModel] : undefined;
 }
 
 function getMaxTurns(): number | undefined {
@@ -56,7 +56,7 @@ function getMaxTurns(): number | undefined {
 function buildClaudeCodeArgs(input: AgentRunInput): string[] {
   const args = ["-p", "--output-format", "json", "--verbose"];
 
-  const configuredModel = getConfiguredClaudeCodeModel();
+  const configuredModel = input.model;
 
   if (configuredModel) {
     args.push("--model", configuredModel);
@@ -165,7 +165,7 @@ export const claudeCodeProvider: ProviderDefinition = {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
       const availableModels = await listAvailableModels();
-      const configuredModel = getConfiguredClaudeCodeModel();
+      const configuredModel = await getConfiguredClaudeCodeModel();
 
       return {
         ...TOOL,
@@ -201,9 +201,13 @@ export const claudeCodeProvider: ProviderDefinition = {
       },
       async run(input, options: ToolInvocationOptions = {}) {
         try {
+          const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "claude",
-            buildClaudeCodeArgs(input),
+            buildClaudeCodeArgs({
+              ...input,
+              model: selection.model
+            }),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

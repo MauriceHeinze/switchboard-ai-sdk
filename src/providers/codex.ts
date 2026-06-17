@@ -12,7 +12,10 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
-import { getConfiguredModel, getConfiguredModelInfo } from "./model-discovery.js";
+import {
+  getConfiguredCodexModel,
+  resolveRequestedModel
+} from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "codex",
@@ -44,12 +47,9 @@ function getCodexSandboxMode(): string {
     : "read-only";
 }
 
-function getConfiguredCodexModel(): string | undefined {
-  return getConfiguredModel("SWITCHBOARD_CODEX_MODEL");
-}
-
 async function listAvailableModels(): Promise<string[] | undefined> {
-  return getConfiguredModelInfo("SWITCHBOARD_CODEX_MODEL").models;
+  const configuredModel = await getConfiguredCodexModel();
+  return configuredModel ? [configuredModel] : undefined;
 }
 
 function buildCodexExecArgs(input: AgentRunInput): string[] {
@@ -69,7 +69,7 @@ function buildCodexExecArgs(input: AgentRunInput): string[] {
     args.push("--ignore-user-config");
   }
 
-  const configuredModel = getConfiguredCodexModel();
+  const configuredModel = input.model;
 
   if (configuredModel) {
     args.push("--model", configuredModel);
@@ -159,7 +159,7 @@ export const codexProvider: ProviderDefinition = {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
       const availableModels = await listAvailableModels();
-      const configuredModel = getConfiguredCodexModel();
+      const configuredModel = await getConfiguredCodexModel();
 
       return {
         ...TOOL,
@@ -198,9 +198,13 @@ export const codexProvider: ProviderDefinition = {
       },
       async run(input, options: ToolInvocationOptions = {}) {
         try {
+          const selection = resolveRequestedModel(tool, input.model);
           const { stdout } = await executeCommand(
             "codex",
-            buildCodexExecArgs(input),
+            buildCodexExecArgs({
+              ...input,
+              model: selection.model
+            }),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

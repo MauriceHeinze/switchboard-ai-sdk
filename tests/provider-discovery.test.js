@@ -169,11 +169,17 @@ test("CLI providers leave models undefined when no configured model is available
   const originalCodexModel = process.env.SWITCHBOARD_CODEX_MODEL;
   const originalClaudeModel = process.env.SWITCHBOARD_CLAUDE_CODE_MODEL;
   const originalOpenCodeModel = process.env.SWITCHBOARD_OPENCODE_MODEL;
+  const originalCodexHome = process.env.CODEX_HOME;
+  const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  const codexHome = await mkdtemp(path.join(tmpdir(), "switchboard-empty-codex-home-"));
+  const claudeConfigDir = await mkdtemp(path.join(tmpdir(), "switchboard-empty-claude-config-"));
 
   try {
     delete process.env.SWITCHBOARD_CODEX_MODEL;
     delete process.env.SWITCHBOARD_CLAUDE_CODE_MODEL;
     delete process.env.SWITCHBOARD_OPENCODE_MODEL;
+    process.env.CODEX_HOME = codexHome;
+    process.env.CLAUDE_CONFIG_DIR = claudeConfigDir;
 
     await withTempPath(
       {
@@ -200,5 +206,61 @@ test("CLI providers leave models undefined when no configured model is available
     process.env.SWITCHBOARD_CODEX_MODEL = originalCodexModel;
     process.env.SWITCHBOARD_CLAUDE_CODE_MODEL = originalClaudeModel;
     process.env.SWITCHBOARD_OPENCODE_MODEL = originalOpenCodeModel;
+    process.env.CODEX_HOME = originalCodexHome;
+    process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
+    await rm(codexHome, { recursive: true, force: true });
+    await rm(claudeConfigDir, { recursive: true, force: true });
+  }
+});
+
+test("codexProvider discovers the default model from CODEX_HOME config", async () => {
+  const originalCodexHome = process.env.CODEX_HOME;
+  const originalCodexModel = process.env.SWITCHBOARD_CODEX_MODEL;
+  const tempDir = await mkdtemp(path.join(tmpdir(), "switchboard-codex-home-"));
+
+  try {
+    delete process.env.SWITCHBOARD_CODEX_MODEL;
+    process.env.CODEX_HOME = tempDir;
+    await writeFile(
+      path.join(tempDir, "config.toml"),
+      'model = "gpt-5.4"\nservice_tier = "default"\n'
+    );
+
+    await withTempPath({ codex: "codex 1.2.3" }, async () => {
+      const tool = await codexProvider.discover();
+
+      assert.deepEqual(tool.models, ["gpt-5.4"]);
+      assert.equal(tool.defaultModel, "gpt-5.4");
+    });
+  } finally {
+    process.env.CODEX_HOME = originalCodexHome;
+    process.env.SWITCHBOARD_CODEX_MODEL = originalCodexModel;
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test("claudeCodeProvider discovers the default model from settings.json", async () => {
+  const originalClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR;
+  const originalClaudeModel = process.env.SWITCHBOARD_CLAUDE_CODE_MODEL;
+  const tempDir = await mkdtemp(path.join(tmpdir(), "switchboard-claude-config-"));
+
+  try {
+    delete process.env.SWITCHBOARD_CLAUDE_CODE_MODEL;
+    process.env.CLAUDE_CONFIG_DIR = tempDir;
+    await writeFile(
+      path.join(tempDir, "settings.json"),
+      JSON.stringify({ model: "claude-fable-5" })
+    );
+
+    await withTempPath({ claude: "claude 0.9.0" }, async () => {
+      const tool = await claudeCodeProvider.discover();
+
+      assert.deepEqual(tool.models, ["claude-fable-5"]);
+      assert.equal(tool.defaultModel, "claude-fable-5");
+    });
+  } finally {
+    process.env.CLAUDE_CONFIG_DIR = originalClaudeConfigDir;
+    process.env.SWITCHBOARD_CLAUDE_CODE_MODEL = originalClaudeModel;
+    await rm(tempDir, { recursive: true, force: true });
   }
 });

@@ -123,14 +123,24 @@ function validateCallRequest(body: unknown): CallToolRequest {
       throw new TypeError("messages must be an array of { role, content } items.");
     }
 
+    if (input.model !== undefined && typeof input.model !== "string") {
+      throw new TypeError("model must be a string when provided.");
+    }
+
     return {
-      messages: input.messages
+      messages: input.messages,
+      model: typeof input.model === "string" ? input.model : undefined
     };
   }
 
   if (typeof input.prompt === "string") {
+    if (input.model !== undefined && typeof input.model !== "string") {
+      throw new TypeError("model must be a string when provided.");
+    }
+
     return {
-      prompt: input.prompt
+      prompt: input.prompt,
+      model: typeof input.model === "string" ? input.model : undefined
     };
   }
 

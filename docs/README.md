@@ -28,3 +28,22 @@ Current behavior:
 - Ollama returns installed local models and uses `SWITCHBOARD_OLLAMA_MODEL` as `defaultModel` when it is set; otherwise it falls back to the first discovered model.
 - Codex, Claude Code, and OpenCode currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
 - Providers without a stable machine-readable model listing mechanism leave `models` undefined when nothing is configured.
+
+## Override the model per call
+
+`callTool()` and the HTTP `/call/:toolId` endpoint accept an optional `model` field.
+
+If the requested model is known to be unavailable and the provider has a `defaultModel`, switchboard-ai returns a warning and falls back to that default.
+
+```ts
+const response = await callTool(
+  "codex",
+  {
+    prompt: "Summarize this repository",
+    model: "gpt-5.5"
+  }
+);
+
+console.log(response.model);
+console.log(response.warnings ?? []);
+```

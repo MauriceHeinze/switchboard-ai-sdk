@@ -169,8 +169,61 @@ test("POST /call/:toolId forwards prompt calls", async () => {
     const body = await response.json();
 
     assert.equal(response.status, 200);
+    assert.equal(body.model, "gpt-5-codex");
     assert.deepEqual(body.result, {
       echoedPrompt: "hello"
+    });
+  } finally {
+    await stopServer(server);
+  }
+});
+
+test("POST /call/:toolId falls back to the default model when the requested model is unavailable", async () => {
+  const server = await startServer({
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        models: tool.models,
+        defaultModel: tool.defaultModel,
+        async health() {
+          return true;
+        },
+        async run(input) {
+          return {
+            echoedPrompt: input.prompt,
+            usedModel: input.model
+          };
+        }
+      };
+    }
+  });
+
+  try {
+    const response = await fetch(createUrl(server, "/call/codex"), {
+      method: "POST",
+      headers: {
+        authorization: "Bearer test-token",
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        prompt: "hello",
+        model: "gpt-5.5"
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.model, "gpt-5-codex");
+    assert.deepEqual(body.warnings, [
+      'Requested model "gpt-5.5" is not available for Codex.',
+      'Falling back to default model "gpt-5-codex".'
+    ]);
+    assert.deepEqual(body.result, {
+      echoedPrompt: "hello",
+      usedModel: "gpt-5-codex"
     });
   } finally {
     await stopServer(server);

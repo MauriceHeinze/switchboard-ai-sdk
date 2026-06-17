@@ -11,7 +11,10 @@ import type {
   DiscoveredTool,
   ToolInvocationOptions
 } from "../types.js";
-import { getConfiguredModel } from "./model-discovery.js";
+import {
+  getConfiguredModel,
+  resolveRequestedModel
+} from "./model-discovery.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "ollama",
@@ -108,8 +111,15 @@ async function listOllamaModels(signal?: AbortSignal): Promise<string[]> {
 
 async function resolveOllamaModel(
   tool: DiscoveredTool,
+  requestedModel?: string,
   signal?: AbortSignal
 ): Promise<string> {
+  const selection = resolveRequestedModel(tool, requestedModel);
+
+  if (selection.model) {
+    return selection.model;
+  }
+
   const configuredModel = getConfiguredOllamaModel();
 
   if (configuredModel) {
@@ -197,7 +207,7 @@ export const ollamaProvider: ProviderDefinition = {
       },
       async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
-          const model = await resolveOllamaModel(tool, options.signal);
+          const model = await resolveOllamaModel(tool, input.model, options.signal);
           const result = await requestOllama<OllamaChatResponse>("/api/chat", {
             method: "POST",
             headers: {
