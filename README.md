@@ -17,7 +17,7 @@ It discovers and connects to local AI tools like:
 - OpenCode
 
 It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they already have, like Codex, Claude Code, OpenCode, or Ollama.
-If you use OpenCode and do not have, or do not want to provide, a paid AI subscription, you can point it at OpenCode's free hosted models such as `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free`.
+If you use OpenCode and do not have, or do not want to provide, a paid AI subscription, you can point it at OpenCode's free hosted models.
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
@@ -91,7 +91,13 @@ Current behavior:
 
 - Ollama returns installed local models.
 - Codex and Claude Code return configured models when one is explicitly set.
-- OpenCode can expose its available models through the CLI, and you can also set `SWITCHBOARD_OPENCODE_MODEL` directly. This includes free OpenCode-hosted options like `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, and `opencode/north-mini-code-free` if you do not want to bring your own subscription.
+- OpenCode can expose its available models through the CLI, and you can also set `SWITCHBOARD_OPENCODE_MODEL` directly.
+
+For OpenCode, a practical way to think about the available models is by access tier:
+
+- Free OpenCode-hosted models for users who do not have or do not want to provide a paid AI subscription: `opencode/big-pickle`, `opencode/deepseek-v4-flash-free`, `opencode/mimo-v2.5-free`, `opencode/nemotron-3-ultra-free`, `opencode/north-mini-code-free`
+- Hosted `opencode-go` models: `opencode-go/deepseek-v4-flash`, `opencode-go/deepseek-v4-pro`, `opencode-go/glm-5.1`, `opencode-go/glm-5.2`, `opencode-go/kimi-k2.6`, `opencode-go/kimi-k2.7-code`, `opencode-go/mimo-v2.5`, `opencode-go/mimo-v2.5-pro`, `opencode-go/minimax-m2.7`, `opencode-go/minimax-m3`, `opencode-go/qwen3.6-plus`, `opencode-go/qwen3.7-max`, `opencode-go/qwen3.7-plus`
+- OpenAI-backed models available through OpenCode: `openai/gpt-5.3-codex-spark`, `openai/gpt-5.4`, `openai/gpt-5.4-fast`, `openai/gpt-5.4-mini`, `openai/gpt-5.4-mini-fast`, `openai/gpt-5.5`, `openai/gpt-5.5-fast`, `openai/gpt-5.5-pro`
 
 ## Run the Local HTTP Server
 
@@ -134,6 +140,13 @@ Example:
 
 ```bash
 SWITCHBOARD_OPENCODE_MODEL=opencode/deepseek-v4-flash-free
+```
+
+Other valid examples:
+
+```bash
+SWITCHBOARD_OPENCODE_MODEL=opencode-go/kimi-k2.7-code
+SWITCHBOARD_OPENCODE_MODEL=openai/gpt-5.5
 ```
 
 ## Why This Project Is Different
