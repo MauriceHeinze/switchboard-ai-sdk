@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="../logo/logo_full.svg" alt="switchboard-ai logo" />
+</p>
+
 # Docs
 
 switchboard-ai is an open-source npm package for connecting apps to local AI tools through one unified API.
