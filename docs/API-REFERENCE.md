@@ -4,7 +4,78 @@
 
 # API Reference
 
-Technical reference for `switchboard-ai`. The published npm package name is `switchboard-ai-sdk`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md).
+Technical reference for `switchboard-ai`. The published npm package name is `switchboard-ai-sdk`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md). For the direct non-HTTP integration flow, see [DIRECT-USAGE.md](./DIRECT-USAGE.md).
+
+## Direct SDK API
+
+Use the library API when your app does not need the local HTTP server.
+
+### `discover()`
+
+```ts
+import { discover } from "switchboard-ai-sdk";
+
+const tools = await discover();
+```
+
+Returns:
+
+```ts
+type DiscoveredTool = {
+  id: "claude-code" | "codex" | "ollama" | "opencode";
+  name: string;
+  type: "agent" | "runtime" | "server" | "unknown";
+  available: boolean;
+  version?: string;
+  capabilities: string[];
+  models?: string[];
+  defaultModel?: string;
+  metadata?: Record<string, unknown>;
+};
+```
+
+### `connect()`
+
+Connect by provider id:
+
+```ts
+import { connect } from "switchboard-ai-sdk";
+
+const tool = await connect("ollama");
+```
+
+Connect by capability:
+
+```ts
+const tool = await connect({
+  capability: "chat",
+  prefer: ["ollama", "codex", "opencode"]
+});
+```
+
+`connect()` returns a `ConnectedTool`:
+
+```ts
+type ConnectedTool = {
+  id: "claude-code" | "codex" | "ollama" | "opencode";
+  name: string;
+  type: "agent" | "runtime" | "server" | "unknown";
+  capabilities: string[];
+  models?: string[];
+  defaultModel?: string;
+  health(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<boolean>;
+  chat(
+    input: {
+      messages: Array<{
+        role: "system" | "user" | "assistant";
+        content: string;
+      }>;
+      model?: string;
+    },
+    options?: { signal?: AbortSignal; timeoutMs?: number }
+  ): Promise<ToolResult>;
+};
+```
 
 ## `tool.chat()` Response Shape
 
@@ -24,6 +95,19 @@ Technical reference for `switchboard-ai`. The published npm package name is `swi
   }
 }
 ```
+
+### Direct SDK Errors
+
+Direct SDK calls throw typed errors:
+
+- `ToolNotFoundError`
+- `ToolUnavailableError`
+- `CapabilityNotSupportedError`
+- `ProviderExecutionError`
+- `TimeoutError`
+- `ToolAuthError`
+
+Use the HTTP server only if you want those failures translated into HTTP statuses and JSON error payloads.
 
 ## HTTP Endpoint Examples
 

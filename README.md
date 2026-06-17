@@ -6,7 +6,7 @@
 
 `switchboard-ai` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
-This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md).
+This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md).
 The published npm package name is `switchboard-ai-sdk`.
 
 It discovers and connects to local AI tools like:
@@ -28,6 +28,8 @@ npm install switchboard-ai-sdk
 ```
 
 ## Quick Start
+
+If your app runs in Node.js or Electron and does not need HTTP endpoints, start with the direct SDK flow below. If you need a local HTTP bridge for another process, skip to [Run the Local HTTP Server](#run-the-local-http-server).
 
 Discover the tools that are available on the current machine, pick one, connect, and send a prompt:
 
@@ -58,6 +60,44 @@ console.log(response?.message.content);
 ```
 
 This keeps the app flow simple: pass a prompt, get a response.
+
+## Without The Server
+
+Direct SDK usage is the default choice when your app can call local tools in-process:
+
+- Electron main process integrations
+- desktop apps with direct Node.js access
+- local scripts and CLIs
+- apps that want typed exceptions instead of HTTP responses
+
+Example:
+
+```ts
+import { connect } from "switchboard-ai-sdk";
+
+const tool = await connect({
+  capability: "chat",
+  prefer: ["ollama", "codex", "opencode"]
+});
+
+const result = await tool.chat(
+  {
+    messages: [
+      {
+        role: "user",
+        content: "Summarize the main idea in one paragraph."
+      }
+    ]
+  },
+  {
+    timeoutMs: 30000
+  }
+);
+
+console.log(result.message.content);
+```
+
+See [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
 
 ## Supported Providers
 
