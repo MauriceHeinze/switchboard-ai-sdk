@@ -1,18 +1,33 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
+import type { ProviderConfig } from "../types.js";
 
-export function getConfiguredModel(envVarName: string): string | undefined {
-  const configuredModel = process.env[envVarName]?.trim();
+function normalizeConfiguredString(value?: string): string | undefined {
+  const normalized = value?.trim();
+
+  return normalized ? normalized : undefined;
+}
+
+export function getConfiguredModel(
+  envVarName: string,
+  configuredValue?: string
+): string | undefined {
+  const configuredModel =
+    normalizeConfiguredString(configuredValue) ??
+    normalizeConfiguredString(process.env[envVarName]);
 
   return configuredModel ? configuredModel : undefined;
 }
 
-export function getConfiguredModelInfo(envVarName: string): {
+export function getConfiguredModelInfo(
+  envVarName: string,
+  configuredValue?: string
+): {
   models?: string[];
   defaultModel?: string;
 } {
-  const configuredModel = getConfiguredModel(envVarName);
+  const configuredModel = getConfiguredModel(envVarName, configuredValue);
 
   return {
     models: configuredModel ? [configuredModel] : undefined,
@@ -43,8 +58,13 @@ async function readOptionalFile(filePath: string): Promise<string | undefined> {
   }
 }
 
-export async function getConfiguredCodexModel(): Promise<string | undefined> {
-  const envModel = getConfiguredModel("SWITCHBOARD_CODEX_MODEL");
+export async function getConfiguredCodexModel(
+  config?: ProviderConfig
+): Promise<string | undefined> {
+  const envModel = getConfiguredModel(
+    "SWITCHBOARD_CODEX_MODEL",
+    config?.codexModel
+  );
 
   if (envModel) {
     return envModel;
@@ -54,19 +74,24 @@ export async function getConfiguredCodexModel(): Promise<string | undefined> {
   const configPath = codexHome
     ? path.join(codexHome, "config.toml")
     : path.join(getHomeDir(), ".codex", "config.toml");
-  const config = await readOptionalFile(configPath);
+  const configContents = await readOptionalFile(configPath);
 
-  if (!config) {
+  if (!configContents) {
     return undefined;
   }
 
-  const match = config.match(/^\s*model\s*=\s*"([^"]+)"\s*$/m);
+  const match = configContents.match(/^\s*model\s*=\s*"([^"]+)"\s*$/m);
 
   return match?.[1]?.trim() || undefined;
 }
 
-export async function getConfiguredClaudeCodeModel(): Promise<string | undefined> {
-  const envModel = getConfiguredModel("SWITCHBOARD_CLAUDE_CODE_MODEL");
+export async function getConfiguredClaudeCodeModel(
+  config?: ProviderConfig
+): Promise<string | undefined> {
+  const envModel = getConfiguredModel(
+    "SWITCHBOARD_CLAUDE_CODE_MODEL",
+    config?.claudeCodeModel
+  );
 
   if (envModel) {
     return envModel;

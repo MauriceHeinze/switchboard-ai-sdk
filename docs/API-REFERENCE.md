@@ -10,12 +10,17 @@ Technical reference for `switchboard-ai`. The published npm package name is `swi
 
 Use the library API when your app does not need the local HTTP server.
 
-### `discover()`
+### `discover(options?)`
 
 ```ts
 import { discover } from "switchboard-ai-sdk";
 
-const tools = await discover();
+const tools = await discover({
+  providerConfig: {
+    ollamaHost: "http://192.168.1.20:11434",
+    ollamaModel: "qwen3:14b"
+  }
+});
 ```
 
 Returns:
@@ -34,14 +39,18 @@ type DiscoveredTool = {
 };
 ```
 
-### `connect()`
+### `connect(input, options?)`
 
 Connect by provider id:
 
 ```ts
 import { connect } from "switchboard-ai-sdk";
 
-const tool = await connect("ollama");
+const tool = await connect("ollama", {
+  providerConfig: {
+    ollamaHost: "http://192.168.1.20:11434"
+  }
+});
 ```
 
 Connect by capability:
@@ -50,7 +59,25 @@ Connect by capability:
 const tool = await connect({
   capability: "chat",
   prefer: ["ollama", "codex", "opencode"]
+}, {
+  providerConfig: {
+    codexSandbox: "workspace-write"
+  }
 });
+```
+
+Supported `providerConfig` fields:
+
+```ts
+type ProviderConfig = {
+  ollamaHost?: string;
+  ollamaModel?: string;
+  codexModel?: string;
+  codexSandbox?: "read-only" | "workspace-write" | "danger-full-access";
+  claudeCodeModel?: string;
+  claudeCodeMaxTurns?: number;
+  opencodeModel?: string;
+};
 ```
 
 `connect()` returns a `ConnectedTool`:
@@ -115,6 +142,12 @@ This is what the validator output looks like when local tools are available:
 
 ### `GET /discover`
 
+Optional query params mirror `providerConfig`, for example:
+
+```text
+/discover?ollamaHost=http://192.168.1.20:11434&ollamaModel=qwen3:14b
+```
+
 ```json
 {
   "tools": [
@@ -143,6 +176,12 @@ This is what the validator output looks like when local tools are available:
 
 ### `GET /health/:toolId`
 
+Optional query params mirror `providerConfig`, for example:
+
+```text
+/health/codex?codexModel=gpt-5.5&codexSandbox=workspace-write
+```
+
 ```json
 {
   "toolId": "codex",
@@ -164,6 +203,10 @@ This is what the validator output looks like when local tools are available:
       "content": "Reply with a short list of 5 ideas."
     }
   ],
+  "providerConfig": {
+    "codexModel": "gpt-5.5",
+    "codexSandbox": "workspace-write"
+  },
   "timeoutMs": 30000
 }
 ```
@@ -236,9 +279,9 @@ for (const tool of tools) {
 
 Current behavior:
 
-- Ollama returns installed local models and uses `SWITCHBOARD_OLLAMA_MODEL` as `defaultModel` when it is set; otherwise it falls back to the first discovered model.
-- Codex and Claude Code currently mirror their configured model into `models` and `defaultModel` when one is explicitly set.
-- OpenCode can expose its available models from the CLI. You can also force a specific model with `SWITCHBOARD_OPENCODE_MODEL`.
+- Ollama returns installed local models and uses `providerConfig.ollamaModel` or `SWITCHBOARD_OLLAMA_MODEL` as `defaultModel` when one is set; otherwise it falls back to the first discovered model.
+- Codex and Claude Code currently mirror their configured model into `models` and `defaultModel` when one is explicitly set through `providerConfig` or environment/config files.
+- OpenCode can expose its available models from the CLI. You can also force a specific model with `providerConfig.opencodeModel` or `SWITCHBOARD_OPENCODE_MODEL`.
 - Providers without a stable machine-readable model listing mechanism leave `models` undefined when nothing is configured.
 
 For OpenCode, the currently supported model names are easiest to understand in three groups:

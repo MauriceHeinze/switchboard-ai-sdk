@@ -10,6 +10,7 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ProviderConfig,
   ToolInvocationOptions
 } from "../types.js";
 import {
@@ -40,20 +41,26 @@ type CodexExecEvent = {
   usage?: Record<string, number>;
 };
 
-function getCodexSandboxMode(): string {
-  const configuredMode = process.env.SWITCHBOARD_CODEX_SANDBOX ?? "read-only";
+function getCodexSandboxMode(config?: ProviderConfig): string {
+  const configuredMode =
+    config?.codexSandbox ?? process.env.SWITCHBOARD_CODEX_SANDBOX ?? "read-only";
 
   return ALLOWED_SANDBOX_MODES.has(configuredMode)
     ? configuredMode
     : "read-only";
 }
 
-async function listAvailableModels(): Promise<string[] | undefined> {
-  const configuredModel = await getConfiguredCodexModel();
+async function listAvailableModels(
+  config?: ProviderConfig
+): Promise<string[] | undefined> {
+  const configuredModel = await getConfiguredCodexModel(config);
   return configuredModel ? [configuredModel] : undefined;
 }
 
-function buildCodexExecArgs(input: { prompt: string; model?: string }): string[] {
+function buildCodexExecArgs(
+  input: { prompt: string; model?: string },
+  config?: ProviderConfig
+): string[] {
   const args = [
     "exec",
     "--json",
@@ -63,7 +70,7 @@ function buildCodexExecArgs(input: { prompt: string; model?: string }): string[]
     "--skip-git-repo-check",
     "--ignore-rules",
     "--sandbox",
-    getCodexSandboxMode()
+    getCodexSandboxMode(config)
   ];
 
   if (process.env.SWITCHBOARD_CODEX_IGNORE_USER_CONFIG === "true") {
@@ -154,13 +161,13 @@ export function parseCodexExecJsonOutput(stdout: string): {
 }
 
 export const codexProvider: ProviderDefinition = {
-  async discover() {
+  async discover(config) {
     try {
       const { stdout } = await executeCommand("codex", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
-      const availableModels = await listAvailableModels();
-      const configuredModel = await getConfiguredCodexModel();
+      const availableModels = await listAvailableModels(config);
+      const configuredModel = await getConfiguredCodexModel(config);
 
       return {
         ...TOOL,
@@ -169,7 +176,7 @@ export const codexProvider: ProviderDefinition = {
         models: availableModels,
         defaultModel: configuredModel,
         metadata: {
-          sandboxMode: getCodexSandboxMode()
+          sandboxMode: getCodexSandboxMode(config)
         }
       };
     } catch {
@@ -182,7 +189,7 @@ export const codexProvider: ProviderDefinition = {
       };
     }
   },
-  async connect(tool) {
+  async connect(tool, config) {
     if (!tool.available) {
       throw new ToolUnavailableError(tool.id);
     }
@@ -205,7 +212,7 @@ export const codexProvider: ProviderDefinition = {
             buildCodexExecArgs({
               prompt: chatInputToPrompt(input),
               model: selection.model
-            }),
+            }, config),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

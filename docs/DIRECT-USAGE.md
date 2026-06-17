@@ -48,6 +48,35 @@ const result = await tool.chat({
 console.log(result.message.content);
 ```
 
+## Provider Config
+
+You can provide provider-specific values directly instead of relying on environment variables:
+
+```ts
+import { connect, discover } from "switchboard-ai-sdk";
+
+const tools = await discover({
+  providerConfig: {
+    ollamaHost: "http://192.168.1.20:11434",
+    ollamaModel: "qwen3:14b",
+    codexModel: "gpt-5.5",
+    codexSandbox: "workspace-write",
+    claudeCodeModel: "claude-sonnet-4",
+    claudeCodeMaxTurns: 4,
+    opencodeModel: "openai/gpt-5.5"
+  }
+});
+
+const tool = await connect("ollama", {
+  providerConfig: {
+    ollamaHost: "http://192.168.1.20:11434",
+    ollamaModel: "qwen3:14b"
+  }
+});
+```
+
+This config takes precedence over environment variables for that call.
+
 ## Request And Response Examples
 
 This is a direct `tool.chat()` request:
@@ -110,6 +139,10 @@ import { connect } from "switchboard-ai-sdk";
 const tool = await connect({
   capability: "chat",
   prefer: ["ollama", "codex", "opencode"]
+}, {
+  providerConfig: {
+    codexSandbox: "workspace-write"
+  }
 });
 ```
 

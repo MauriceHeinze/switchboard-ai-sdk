@@ -10,6 +10,7 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ProviderConfig,
   ToolInvocationOptions
 } from "../types.js";
 import {
@@ -47,12 +48,14 @@ type OpenCodeEvent = {
   };
 };
 
-function getConfiguredOpenCodeModel(): string | undefined {
-  return getConfiguredModel("SWITCHBOARD_OPENCODE_MODEL");
+function getConfiguredOpenCodeModel(config?: ProviderConfig): string | undefined {
+  return getConfiguredModel("SWITCHBOARD_OPENCODE_MODEL", config?.opencodeModel);
 }
 
-async function listAvailableModels(): Promise<string[] | undefined> {
-  const configuredModel = getConfiguredOpenCodeModel();
+async function listAvailableModels(
+  config?: ProviderConfig
+): Promise<string[] | undefined> {
+  const configuredModel = getConfiguredOpenCodeModel(config);
 
   try {
     const { stdout } = await executeCommand("opencode", ["models"], {
@@ -69,14 +72,20 @@ async function listAvailableModels(): Promise<string[] | undefined> {
 
     return discoveredModels;
   } catch {
-    return getConfiguredModelInfo("SWITCHBOARD_OPENCODE_MODEL").models;
+    return getConfiguredModelInfo(
+      "SWITCHBOARD_OPENCODE_MODEL",
+      config?.opencodeModel
+    ).models;
   }
 }
 
-export function buildOpenCodeArgs(input: { prompt: string; model?: string }): string[] {
+export function buildOpenCodeArgs(
+  input: { prompt: string; model?: string },
+  config?: ProviderConfig
+): string[] {
   const args = ["run", "--format", "json"];
 
-  const selectedModel = input.model ?? getConfiguredOpenCodeModel();
+  const selectedModel = input.model ?? getConfiguredOpenCodeModel(config);
 
   if (selectedModel) {
     args.push("--model", selectedModel);
@@ -172,13 +181,13 @@ export function parseOpenCodeJsonOutput(stdout: string): {
 }
 
 export const opencodeProvider: ProviderDefinition = {
-  async discover() {
+  async discover(config) {
     try {
       const { stdout } = await executeCommand("opencode", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
-      const availableModels = await listAvailableModels();
-      const configuredModel = getConfiguredOpenCodeModel();
+      const availableModels = await listAvailableModels(config);
+      const configuredModel = getConfiguredOpenCodeModel(config);
 
       return {
         ...TOOL,
@@ -197,7 +206,7 @@ export const opencodeProvider: ProviderDefinition = {
       };
     }
   },
-  async connect(tool) {
+  async connect(tool, config) {
     if (!tool.available) {
       throw new ToolUnavailableError(tool.id);
     }
@@ -220,7 +229,7 @@ export const opencodeProvider: ProviderDefinition = {
             buildOpenCodeArgs({
               prompt: chatInputToPrompt(input),
               model: selection.model
-            }),
+            }, config),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

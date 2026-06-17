@@ -199,6 +199,24 @@ test("buildOpenCodeArgs uses the selected model when provided", () => {
   }
 });
 
+test("buildOpenCodeArgs uses explicit provider config when no model is provided", () => {
+  assert.deepEqual(
+    buildOpenCodeArgs(
+      { prompt: "hello" },
+      { opencodeModel: "configured-through-api" }
+    ),
+    [
+      "run",
+      "--format",
+      "json",
+      "--model",
+      "configured-through-api",
+      "--",
+      "hello"
+    ]
+  );
+});
+
 test("ollamaProvider chat uses the discovered default model", async () => {
   const originalFetch = globalThis.fetch;
   const requests = [];
@@ -227,22 +245,27 @@ test("ollamaProvider chat uses the discovered default model", async () => {
   };
 
   try {
-    const tool = await ollamaProvider.connect({
-      id: "ollama",
-      name: "Ollama",
-      type: "runtime",
-      available: true,
-      version: "0.1.0",
-      capabilities: ["chat", "health-check"],
-      defaultModel: "qwen3:14b"
-    });
+    const tool = await ollamaProvider.connect(
+      {
+        id: "ollama",
+        name: "Ollama",
+        type: "runtime",
+        available: true,
+        version: "0.1.0",
+        capabilities: ["chat", "health-check"],
+        defaultModel: "qwen3:14b"
+      },
+      {
+        ollamaHost: "http://127.0.0.1:22434"
+      }
+    );
 
     const result = await tool.chat({
       messages: [{ role: "user", content: "hi" }]
     });
 
     assert.equal(requests.length, 1);
-    assert.equal(requests[0].url, "http://127.0.0.1:11434/api/chat");
+    assert.equal(requests[0].url, "http://127.0.0.1:22434/api/chat");
     assert.deepEqual(JSON.parse(requests[0].init.body), {
       model: "qwen3:14b",
       messages: [{ role: "user", content: "hi" }],

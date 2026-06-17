@@ -10,6 +10,7 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
+  ProviderConfig,
   ToolInvocationOptions
 } from "../types.js";
 import {
@@ -37,12 +38,22 @@ type ClaudeCodeJsonOutput = {
   session_id?: string;
 };
 
-async function listAvailableModels(): Promise<string[] | undefined> {
-  const configuredModel = await getConfiguredClaudeCodeModel();
+async function listAvailableModels(
+  config?: ProviderConfig
+): Promise<string[] | undefined> {
+  const configuredModel = await getConfiguredClaudeCodeModel(config);
   return configuredModel ? [configuredModel] : undefined;
 }
 
-function getMaxTurns(): number | undefined {
+function getMaxTurns(config?: ProviderConfig): number | undefined {
+  if (
+    typeof config?.claudeCodeMaxTurns === "number" &&
+    Number.isFinite(config.claudeCodeMaxTurns) &&
+    config.claudeCodeMaxTurns > 0
+  ) {
+    return Math.trunc(config.claudeCodeMaxTurns);
+  }
+
   const raw = process.env.SWITCHBOARD_CLAUDE_CODE_MAX_TURNS?.trim();
 
   if (!raw) {
@@ -54,7 +65,10 @@ function getMaxTurns(): number | undefined {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
-function buildClaudeCodeArgs(input: { prompt: string; model?: string }): string[] {
+function buildClaudeCodeArgs(
+  input: { prompt: string; model?: string },
+  config?: ProviderConfig
+): string[] {
   const args = ["-p", "--output-format", "json", "--verbose"];
 
   const configuredModel = input.model;
@@ -63,7 +77,7 @@ function buildClaudeCodeArgs(input: { prompt: string; model?: string }): string[
     args.push("--model", configuredModel);
   }
 
-  const maxTurns = getMaxTurns();
+  const maxTurns = getMaxTurns(config);
 
   if (maxTurns !== undefined) {
     args.push("--max-turns", String(maxTurns));
@@ -160,13 +174,13 @@ export function parseClaudeCodeJsonOutput(stdout: string): {
 }
 
 export const claudeCodeProvider: ProviderDefinition = {
-  async discover() {
+  async discover(config) {
     try {
       const { stdout } = await executeCommand("claude", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
-      const availableModels = await listAvailableModels();
-      const configuredModel = await getConfiguredClaudeCodeModel();
+      const availableModels = await listAvailableModels(config);
+      const configuredModel = await getConfiguredClaudeCodeModel(config);
 
       return {
         ...TOOL,
@@ -185,7 +199,7 @@ export const claudeCodeProvider: ProviderDefinition = {
       };
     }
   },
-  async connect(tool) {
+  async connect(tool, config) {
     if (!tool.available) {
       throw new ToolUnavailableError(tool.id);
     }
@@ -208,7 +222,7 @@ export const claudeCodeProvider: ProviderDefinition = {
             buildClaudeCodeArgs({
               prompt: chatInputToPrompt(input),
               model: selection.model
-            }),
+            }, config),
             {
               signal: options.signal,
               timeoutMs: options.timeoutMs

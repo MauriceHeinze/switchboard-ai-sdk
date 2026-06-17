@@ -1,4 +1,10 @@
-import type { ChatInput, ProviderId, ToolResult, ToolType } from "../types.js";
+import type {
+  ChatInput,
+  ProviderConfig,
+  ProviderId,
+  ToolResult,
+  ToolType
+} from "../types.js";
 
 export type ToolHealthStatus = "healthy" | "unavailable" | "timeout" | "error";
 
@@ -37,16 +43,23 @@ export type ChatToolResponse = {
 
 export type ChatToolOptions = {
   timeoutMs?: number;
+  providerConfig?: ProviderConfig;
 };
 
 export type ToolOperationOptions = {
   timeoutMs?: number;
+  providerConfig?: ProviderConfig;
+};
+
+export type DiscoverToolOptions = {
+  providerConfig?: ProviderConfig;
 };
 
 export type SwitchboardServerOptions = {
   host?: string;
   port?: number;
   maxTimeoutMs?: number;
+  providerConfig?: ProviderConfig;
 };
 
 export type StartedSwitchboardServer = {

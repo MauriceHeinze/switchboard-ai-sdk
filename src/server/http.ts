@@ -7,7 +7,12 @@ import {
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
-import type { ChatInput, ProviderId } from "../types.js";
+import type {
+  ChatInput,
+  CodexSandboxMode,
+  ProviderConfig,
+  ProviderId
+} from "../types.js";
 import type {
   ChatToolRequest,
   DiscoverToolSummary,
@@ -18,6 +23,11 @@ import type {
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_MAX_TIMEOUT_MS = 60_000;
+const ALLOWED_SANDBOX_MODES = new Set<CodexSandboxMode>([
+  "read-only",
+  "workspace-write",
+  "danger-full-access"
+]);
 
 type JsonError = {
   error: {
@@ -69,6 +79,130 @@ function toDiscoverToolSummary(tool: {
 function getToolId(pathname: string): ProviderId | undefined {
   const parts = pathname.split("/").filter(Boolean);
   return parts[1] as ProviderId | undefined;
+}
+
+function validateProviderConfig(input: unknown): ProviderConfig {
+  if (input === undefined) {
+    return {};
+  }
+
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new TypeError("providerConfig must be an object when provided.");
+  }
+
+  const candidate = input as Record<string, unknown>;
+  const providerConfig: ProviderConfig = {};
+
+  if (candidate.ollamaHost !== undefined) {
+    if (typeof candidate.ollamaHost !== "string") {
+      throw new TypeError("providerConfig.ollamaHost must be a string.");
+    }
+
+    providerConfig.ollamaHost = candidate.ollamaHost;
+  }
+
+  if (candidate.ollamaModel !== undefined) {
+    if (typeof candidate.ollamaModel !== "string") {
+      throw new TypeError("providerConfig.ollamaModel must be a string.");
+    }
+
+    providerConfig.ollamaModel = candidate.ollamaModel;
+  }
+
+  if (candidate.codexModel !== undefined) {
+    if (typeof candidate.codexModel !== "string") {
+      throw new TypeError("providerConfig.codexModel must be a string.");
+    }
+
+    providerConfig.codexModel = candidate.codexModel;
+  }
+
+  if (candidate.codexSandbox !== undefined) {
+    if (
+      typeof candidate.codexSandbox !== "string" ||
+      !ALLOWED_SANDBOX_MODES.has(candidate.codexSandbox as CodexSandboxMode)
+    ) {
+      throw new TypeError(
+        "providerConfig.codexSandbox must be one of read-only, workspace-write, or danger-full-access."
+      );
+    }
+
+    providerConfig.codexSandbox = candidate.codexSandbox as CodexSandboxMode;
+  }
+
+  if (candidate.claudeCodeModel !== undefined) {
+    if (typeof candidate.claudeCodeModel !== "string") {
+      throw new TypeError("providerConfig.claudeCodeModel must be a string.");
+    }
+
+    providerConfig.claudeCodeModel = candidate.claudeCodeModel;
+  }
+
+  if (candidate.claudeCodeMaxTurns !== undefined) {
+    if (
+      typeof candidate.claudeCodeMaxTurns !== "number" ||
+      !Number.isFinite(candidate.claudeCodeMaxTurns) ||
+      candidate.claudeCodeMaxTurns <= 0
+    ) {
+      throw new TypeError(
+        "providerConfig.claudeCodeMaxTurns must be a positive number."
+      );
+    }
+
+    providerConfig.claudeCodeMaxTurns = Math.trunc(
+      candidate.claudeCodeMaxTurns
+    );
+  }
+
+  if (candidate.opencodeModel !== undefined) {
+    if (typeof candidate.opencodeModel !== "string") {
+      throw new TypeError("providerConfig.opencodeModel must be a string.");
+    }
+
+    providerConfig.opencodeModel = candidate.opencodeModel;
+  }
+
+  return providerConfig;
+}
+
+function mergeProviderConfig(
+  base?: ProviderConfig,
+  override?: ProviderConfig
+): ProviderConfig | undefined {
+  if (!base && !override) {
+    return undefined;
+  }
+
+  return {
+    ...base,
+    ...override
+  };
+}
+
+function getProviderConfigFromQuery(searchParams: URLSearchParams): ProviderConfig | undefined {
+  const rawConfig: Record<string, unknown> = {};
+
+  for (const key of [
+    "ollamaHost",
+    "ollamaModel",
+    "codexModel",
+    "codexSandbox",
+    "claudeCodeModel",
+    "claudeCodeMaxTurns",
+    "opencodeModel"
+  ]) {
+    const value = searchParams.get(key);
+
+    if (value === null) {
+      continue;
+    }
+
+    rawConfig[key] = key === "claudeCodeMaxTurns" ? Number(value) : value;
+  }
+
+  return Object.keys(rawConfig).length > 0
+    ? validateProviderConfig(rawConfig)
+    : undefined;
 }
 
 async function readJsonBody(request: IncomingMessage): Promise<unknown> {
@@ -135,6 +269,18 @@ function validateChatRequest(body: unknown): ChatToolRequest {
   throw new TypeError("Request body must include messages.");
 }
 
+function getProviderConfigFromBody(body: unknown): ProviderConfig | undefined {
+  if (!body || typeof body !== "object") {
+    return undefined;
+  }
+
+  const providerConfig = (body as Record<string, unknown>).providerConfig;
+
+  return providerConfig === undefined
+    ? undefined
+    : validateProviderConfig(providerConfig);
+}
+
 function getTimeoutMs(
   body: unknown,
   maxTimeoutMs: number
@@ -194,6 +340,7 @@ export function createSwitchboardServer(
 ): Server {
   const host = options.host ?? DEFAULT_HOST;
   const maxTimeoutMs = options.maxTimeoutMs ?? DEFAULT_MAX_TIMEOUT_MS;
+  const defaultProviderConfig = options.providerConfig;
   const startedAt = Date.now();
 
   const server = createServer(async (request, response) => {
@@ -211,7 +358,11 @@ export function createSwitchboardServer(
 
     try {
       if (method === "GET" && url.pathname === "/discover") {
-        const tools = await discoverTools();
+        const providerConfig = mergeProviderConfig(
+          defaultProviderConfig,
+          getProviderConfigFromQuery(url.searchParams)
+        );
+        const tools = await discoverTools({ providerConfig });
 
         writeJson(response, 200, {
           tools: tools.map(toDiscoverToolSummary)
@@ -231,7 +382,11 @@ export function createSwitchboardServer(
           { timeoutMs: url.searchParams.get("timeoutMs") ? Number(url.searchParams.get("timeoutMs")) : undefined },
           maxTimeoutMs
         );
-        const result = await checkToolHealth(toolId, { timeoutMs });
+        const providerConfig = mergeProviderConfig(
+          defaultProviderConfig,
+          getProviderConfigFromQuery(url.searchParams)
+        );
+        const result = await checkToolHealth(toolId, { timeoutMs, providerConfig });
 
         writeJson(response, 200, result);
         return;
@@ -248,7 +403,14 @@ export function createSwitchboardServer(
         const body = await readJsonBody(request);
         const timeoutMs = getTimeoutMs(body, maxTimeoutMs);
         const input = validateChatRequest(body);
-        const result = await chatWithTool(toolId, input, { timeoutMs });
+        const providerConfig = mergeProviderConfig(
+          defaultProviderConfig,
+          getProviderConfigFromBody(body)
+        );
+        const result = await chatWithTool(toolId, input, {
+          timeoutMs,
+          providerConfig
+        });
 
         writeJson(response, 200, result);
         return;

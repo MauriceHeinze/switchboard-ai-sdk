@@ -2,6 +2,21 @@ export type ProviderId = "claude-code" | "codex" | "ollama" | "opencode";
 
 export type ToolType = "agent" | "runtime" | "server" | "unknown";
 
+export type CodexSandboxMode =
+  | "read-only"
+  | "workspace-write"
+  | "danger-full-access";
+
+export type ProviderConfig = {
+  ollamaHost?: string;
+  ollamaModel?: string;
+  codexModel?: string;
+  codexSandbox?: CodexSandboxMode;
+  claudeCodeModel?: string;
+  claudeCodeMaxTurns?: number;
+  opencodeModel?: string;
+};
+
 export type Capability =
   | "agent-task"
   | "code-analysis"
@@ -65,3 +80,9 @@ export type ConnectByCapabilityOptions = {
 };
 
 export type ConnectInput = ProviderId | ConnectByCapabilityOptions;
+
+export type DiscoverOptions = {
+  providerConfig?: ProviderConfig;
+};
+
+export type ConnectOptions = DiscoverOptions;
