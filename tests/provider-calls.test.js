@@ -226,7 +226,35 @@ test("parseOpenCodeAuthStatusOutput parses authenticated text heuristics", () =>
     authenticated: true,
     authStatus: "authenticated",
     reason: "OpenCode is authenticated.",
-    command: "opencode providers list",
+    command: "opencode auth list",
+    output
+  });
+});
+
+test("parseOpenCodeAuthStatusOutput parses credential list output", () => {
+  const output = "\u001b[0m\n┌  Credentials ~/.local/share/opencode/auth.json\n│\n●  OpenAI oauth\n│\n└  1 credentials\n";
+  const result = parseOpenCodeAuthStatusOutput(output);
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: true,
+    authStatus: "authenticated",
+    reason: "OpenCode is authenticated.",
+    command: "opencode auth list",
+    output
+  });
+});
+
+test("parseOpenCodeAuthStatusOutput parses empty credential list output", () => {
+  const output = "┌  Credentials ~/.local/share/opencode/auth.json\n└  0 credentials\n";
+  const result = parseOpenCodeAuthStatusOutput(output);
+
+  assert.deepEqual(result, {
+    authSupported: true,
+    authenticated: false,
+    authStatus: "unauthenticated",
+    reason: "OpenCode requires authentication before it can handle requests.",
+    command: "opencode auth list",
     output
   });
 });

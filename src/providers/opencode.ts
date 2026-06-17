@@ -41,8 +41,8 @@ const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   capabilities: ["agent-task", "code-analysis", "code-edit", "chat", "health-check"]
 };
 const DISCOVERY_TIMEOUT_MS = 5_000;
-const AUTH_STATUS_COMMAND = ["providers", "list"] as const;
-const AUTH_START_COMMAND = ["providers", "login"] as const;
+const AUTH_STATUS_COMMAND = ["auth", "list"] as const;
+const AUTH_START_COMMAND = ["auth", "login"] as const;
 
 type OpenCodeEvent = {
   type?: string;
@@ -139,6 +139,10 @@ function isOpenCodeAuthError(stderr: string): boolean {
   return /auth|login|api[_ -]?key|unauthorized|not logged in/i.test(stderr);
 }
 
+function stripAnsi(value: string): string {
+  return value.replace(/\u001b\[[0-9;]*m/g, "");
+}
+
 function getOpenCodeAuthCommand(args: readonly string[]): string {
   return ["opencode", ...args].join(" ");
 }
@@ -147,10 +151,18 @@ export function parseOpenCodeAuthStatusOutput(
   output: string
 ): ToolAuthCheckResult {
   const command = getOpenCodeAuthCommand(AUTH_STATUS_COMMAND);
-  const normalized = output.trim();
+  const normalized = stripAnsi(output).trim();
 
   if (!normalized) {
     return unknownAuth(command, output);
+  }
+
+  if (/\b0 credentials\b/i.test(normalized)) {
+    return unauthenticatedAuth(
+      command,
+      output,
+      "OpenCode requires authentication before it can handle requests."
+    );
   }
 
   if (/(not logged in|unauthorized|login required|no credentials)/i.test(normalized)) {
@@ -161,7 +173,12 @@ export function parseOpenCodeAuthStatusOutput(
     );
   }
 
-  if (/(logged in|authenticated|connected|default provider.*configured)/i.test(normalized)) {
+  if (
+    /(logged in|authenticated|connected|default provider.*configured)/i.test(
+      normalized
+    ) ||
+    /\b[1-9]\d* credentials\b/i.test(normalized)
+  ) {
     return authenticatedAuth(command, output, "OpenCode is authenticated.");
   }
 
