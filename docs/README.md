@@ -37,7 +37,7 @@ Use `run()` for prompt-style tools:
 
 ```ts
 const response = await tool.run?.({
-  prompt: "Summarize this repository."
+  prompt: "Generate me a list of five healthy lunch ideas."
 });
 
 console.log(response?.message.content);
@@ -50,7 +50,7 @@ const response = await tool.chat?.({
   messages: [
     {
       role: "user",
-      content: "Summarize this repository."
+      content: "Generate me a list of five healthy lunch ideas."
     }
   ]
 });
@@ -119,7 +119,7 @@ If the requested model is known to be unavailable and the provider has a `defaul
 const response = await callTool(
   "codex",
   {
-    prompt: "Summarize this repository",
+    prompt: "Generate me a list of five healthy lunch ideas.",
     model: "gpt-5.5"
   }
 );

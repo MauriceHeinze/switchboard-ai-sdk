@@ -46,7 +46,7 @@ If the connected tool supports prompt-style runs:
 
 ```ts
 const response = await tool.run?.({
-  prompt: "Summarize what this repository does in one paragraph."
+  prompt: "Generate me a list of five healthy lunch ideas."
 });
 
 console.log(response?.message.content);
@@ -59,7 +59,7 @@ const response = await tool.chat?.({
   messages: [
     {
       role: "user",
-      content: "Summarize what this repository does in one paragraph."
+      content: "Generate me a list of five healthy lunch ideas."
     }
   ]
 });
@@ -127,7 +127,7 @@ Use `callTool()` if you want one direct entrypoint that looks like a typical LLM
 import { callTool } from "switchboard-ai";
 
 const response = await callTool("codex", {
-  prompt: "Summarize the public API of this package.",
+  prompt: "Generate me a list of five healthy lunch ideas.",
   model: "gpt-5"
 });
 
@@ -144,7 +144,7 @@ const response = await callTool("ollama", {
   messages: [
     {
       role: "user",
-      content: "Summarize this repository in one paragraph."
+      content: "Generate me a list of five healthy lunch ideas."
     }
   ],
   model: "llama3.1"
