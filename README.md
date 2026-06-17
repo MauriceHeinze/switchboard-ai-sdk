@@ -40,20 +40,6 @@ if (!toolId) {
 const tool = await connect(toolId);
 ```
 
-This gives you a provider-style integration flow without sending every request through a paid hosted API.
-
-If the connected tool supports prompt-style runs:
-
-```ts
-const response = await tool.run?.({
-  prompt: "Generate me a list of five healthy lunch ideas."
-});
-
-console.log(response?.message.content);
-```
-
-If the connected tool supports chat messages:
-
 ```ts
 const response = await tool.chat?.({
   messages: [
@@ -67,6 +53,8 @@ const response = await tool.chat?.({
 console.log(response?.message.content);
 ```
 
+This keeps the app flow simple: pass a prompt, get a response.
+
 ## Supported Providers
 
 | Provider | Type | Typical use |
@@ -78,7 +66,7 @@ console.log(response?.message.content);
 
 ## Response Shape
 
-`run()`, `chat()`, and `callTool()` all return the same result shape:
+`chat()` returns this result shape:
 
 ```ts
 {
@@ -118,40 +106,6 @@ Current behavior:
 
 - Ollama returns installed local models.
 - Codex, Claude Code, and OpenCode return configured models when one is explicitly set.
-
-## Call a Provider Through the Library API
-
-Use `callTool()` if you want one direct entrypoint that looks like a typical LLM provider call:
-
-```ts
-import { callTool } from "switchboard-ai";
-
-const response = await callTool("codex", {
-  prompt: "Generate me a list of five healthy lunch ideas.",
-  model: "gpt-5"
-});
-
-console.log(response.model);
-console.log(response.result.message.content);
-```
-
-For chat-style requests:
-
-```ts
-import { callTool } from "switchboard-ai";
-
-const response = await callTool("ollama", {
-  messages: [
-    {
-      role: "user",
-      content: "Generate me a list of five healthy lunch ideas."
-    }
-  ],
-  model: "llama3.1"
-});
-
-console.log(response.result.message.content);
-```
 
 ## Run the Local HTTP Server
 
