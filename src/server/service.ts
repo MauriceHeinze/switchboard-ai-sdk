@@ -11,8 +11,6 @@ import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
-  DiscoverOptions,
-  ProviderConfig,
   ProviderId,
   ToolInvocationOptions
 } from "../types.js";
@@ -20,7 +18,6 @@ import type {
   ChatToolOptions,
   ChatToolRequest,
   ChatToolResponse,
-  DiscoverToolOptions,
   ToolHealthResult,
   ToolOperationOptions
 } from "./types.js";
@@ -88,17 +85,8 @@ async function withAbortableTimeout<T>(
   });
 }
 
-function toDiscoverOptions(providerConfig?: ProviderConfig): DiscoverOptions {
-  return {
-    providerConfig
-  };
-}
-
-async function getDiscoveredTool(
-  toolId: ProviderId,
-  providerConfig?: ProviderConfig
-): Promise<DiscoveredTool> {
-  const tools = await discover(toDiscoverOptions(providerConfig));
+async function getDiscoveredTool(toolId: ProviderId): Promise<DiscoveredTool> {
+  const tools = await discover();
   const tool = tools.find((candidate) => candidate.id === toolId);
 
   if (!tool) {
@@ -108,8 +96,8 @@ async function getDiscoveredTool(
   return tool;
 }
 
-export async function discoverTools(options: DiscoverToolOptions = {}) {
-  return discover(toDiscoverOptions(options.providerConfig));
+export async function discoverTools() {
+  return discover();
 }
 
 export async function checkToolHealth(
@@ -121,7 +109,7 @@ export async function checkToolHealth(
 
   try {
     const discoveredTool = await withTimeout(
-      getDiscoveredTool(toolId, options.providerConfig),
+      getDiscoveredTool(toolId),
       options.timeoutMs
     );
 
@@ -140,10 +128,7 @@ export async function checkToolHealth(
       };
     }
 
-    const tool = await withTimeout(
-      connect(toolId, toDiscoverOptions(options.providerConfig)),
-      options.timeoutMs
-    );
+    const tool = await withTimeout(connect(toolId), options.timeoutMs);
     const healthy = await withAbortableTimeout(
       (invocationOptions) => tool.health(invocationOptions),
       options.timeoutMs
@@ -198,7 +183,7 @@ export async function chatWithTool(
 ): Promise<ChatToolResponse> {
   const startedAt = Date.now();
   const discoveredTool = await withTimeout(
-    getDiscoveredTool(toolId, options.providerConfig),
+    getDiscoveredTool(toolId),
     options.timeoutMs
   );
 
@@ -211,10 +196,7 @@ export async function chatWithTool(
     );
   }
 
-  const tool = await withTimeout(
-    connect(toolId, toDiscoverOptions(options.providerConfig)),
-    options.timeoutMs
-  );
+  const tool = await withTimeout(connect(toolId), options.timeoutMs);
   assertToolSupportsChat(tool);
   const modelSelection = resolveRequestedModel(discoveredTool, input.model);
   const invocationInput = {

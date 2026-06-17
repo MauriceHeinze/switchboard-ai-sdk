@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { once } from "node:events";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { configure } from "../dist/index.js";
 import { claudeCodeProvider } from "../dist/providers/claude-code.js";
 import { codexProvider } from "../dist/providers/codex.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
@@ -118,17 +119,20 @@ test("ollamaProvider discover uses explicit provider config", async () => {
   });
 
   try {
+    configure({
+      ollamaHost: getServerUrl(server),
+      ollamaModel: "llama3.2:3b"
+    });
+
     await withTempPath({ ollama: "ollama version 0.1.0" }, async () => {
-      const tool = await ollamaProvider.discover({
-        ollamaHost: getServerUrl(server),
-        ollamaModel: "llama3.2:3b"
-      });
+      const tool = await ollamaProvider.discover();
 
       assert.equal(tool.available, true);
       assert.deepEqual(tool.models, ["llama3.2:3b", "qwen3:14b"]);
       assert.equal(tool.defaultModel, "llama3.2:3b");
     });
   } finally {
+    configure();
     await closeServer(server);
   }
 });
@@ -213,12 +217,21 @@ exit 1
 });
 
 test("CLI providers accept explicit provider config during discovery", async () => {
-  await withTempPath(
-    {
-      codex: "codex 1.2.3",
-      claude: "claude 0.9.0",
-      opencode: {
-        script: `#!/bin/sh
+  configure({
+    codexModel: "gpt-5-user",
+    codexSandbox: "workspace-write",
+    claudeCodeModel: "claude-user",
+    claudeCodeMaxTurns: 3,
+    opencodeModel: "o3-user"
+  });
+
+  try {
+    await withTempPath(
+      {
+        codex: "codex 1.2.3",
+        claude: "claude 0.9.0",
+        opencode: {
+          script: `#!/bin/sh
 if [ "$1" = "--version" ]; then
   printf '%s\n' 'opencode 0.8.0'
   exit 0
@@ -231,32 +244,27 @@ fi
 
 exit 1
 `
-      }
-    },
-    async () => {
-      const [codexTool, claudeTool, opencodeTool] = await Promise.all([
-        codexProvider.discover({
-          codexModel: "gpt-5-user",
-          codexSandbox: "workspace-write"
-        }),
-        claudeCodeProvider.discover({
-          claudeCodeModel: "claude-user",
-          claudeCodeMaxTurns: 3
-        }),
-        opencodeProvider.discover({
-          opencodeModel: "o3-user"
-        })
-      ]);
+        }
+      },
+      async () => {
+        const [codexTool, claudeTool, opencodeTool] = await Promise.all([
+          codexProvider.discover(),
+          claudeCodeProvider.discover(),
+          opencodeProvider.discover()
+        ]);
 
-      assert.deepEqual(codexTool.models, ["gpt-5-user"]);
-      assert.equal(codexTool.defaultModel, "gpt-5-user");
-      assert.equal(codexTool.metadata?.sandboxMode, "workspace-write");
-      assert.deepEqual(claudeTool.models, ["claude-user"]);
-      assert.equal(claudeTool.defaultModel, "claude-user");
-      assert.deepEqual(opencodeTool.models, ["o3-user", "openai/gpt-5.4"]);
-      assert.equal(opencodeTool.defaultModel, "o3-user");
-    }
-  );
+        assert.deepEqual(codexTool.models, ["gpt-5-user"]);
+        assert.equal(codexTool.defaultModel, "gpt-5-user");
+        assert.equal(codexTool.metadata?.sandboxMode, "workspace-write");
+        assert.deepEqual(claudeTool.models, ["claude-user"]);
+        assert.equal(claudeTool.defaultModel, "claude-user");
+        assert.deepEqual(opencodeTool.models, ["o3-user", "openai/gpt-5.4"]);
+        assert.equal(opencodeTool.defaultModel, "o3-user");
+      }
+    );
+  } finally {
+    configure();
+  }
 });
 
 test("CLI providers leave models undefined when no configured model is available", async () => {

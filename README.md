@@ -99,30 +99,26 @@ console.log(result.message.content);
 
 ## Provider Config
 
-You can pass provider-specific values directly instead of relying only on environment variables:
+You can set provider-specific values once instead of passing them on every call:
 
 ```ts
-const tools = await discover({
-  providerConfig: {
-    ollamaHost: "http://192.168.1.20:11434",
-    ollamaModel: "qwen3:14b",
-    codexModel: "gpt-5.5",
-    codexSandbox: "workspace-write",
-    claudeCodeModel: "claude-sonnet-4",
-    claudeCodeMaxTurns: 4,
-    opencodeModel: "openai/gpt-5.5"
-  }
+import { configure, connect, discover } from "switchboard-ai-sdk";
+
+configure({
+  ollamaHost: "http://192.168.1.20:11434",
+  ollamaModel: "qwen3:14b",
+  codexModel: "gpt-5.5",
+  codexSandbox: "workspace-write",
+  claudeCodeModel: "claude-sonnet-4",
+  claudeCodeMaxTurns: 4,
+  opencodeModel: "openai/gpt-5.5"
 });
 
-const tool = await connect("codex", {
-  providerConfig: {
-    codexModel: "gpt-5.5",
-    codexSandbox: "workspace-write"
-  }
-});
+const tools = await discover();
+const tool = await connect("codex");
 ```
 
-For the HTTP server, pass the same values as query params on `GET /discover` and `GET /health/:toolId`, or as a `providerConfig` object in `POST /chat/:toolId`.
+All subsequent SDK and server calls use that config until you call `configure()` again.
 
 See [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
 
@@ -191,10 +187,6 @@ Endpoints:
 curl http://127.0.0.1:3000/discover
 ```
 
-```bash
-curl "http://127.0.0.1:3000/discover?ollamaHost=http://127.0.0.1:11434&ollamaModel=qwen3:14b"
-```
-
 ## Environment Variables
 
 Useful configuration knobs include:
@@ -207,7 +199,7 @@ Useful configuration knobs include:
 - `SWITCHBOARD_CLAUDE_CODE_MAX_TURNS`
 - `SWITCHBOARD_OPENCODE_MODEL`
 
-These are optional defaults now. Per-call `providerConfig` values take precedence when you pass them.
+These are optional defaults. Values passed through `configure()` take precedence until changed.
 
 Example:
 

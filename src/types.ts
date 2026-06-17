@@ -80,9 +80,3 @@ export type ConnectByCapabilityOptions = {
 };
 
 export type ConnectInput = ProviderId | ConnectByCapabilityOptions;
-
-export type DiscoverOptions = {
-  providerConfig?: ProviderConfig;
-};
-
-export type ConnectOptions = DiscoverOptions;

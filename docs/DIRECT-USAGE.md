@@ -50,32 +50,26 @@ console.log(result.message.content);
 
 ## Provider Config
 
-You can provide provider-specific values directly instead of relying on environment variables:
+You can set provider-specific values once instead of passing them on every call:
 
 ```ts
-import { connect, discover } from "switchboard-ai-sdk";
+import { configure, connect, discover } from "switchboard-ai-sdk";
 
-const tools = await discover({
-  providerConfig: {
-    ollamaHost: "http://192.168.1.20:11434",
-    ollamaModel: "qwen3:14b",
-    codexModel: "gpt-5.5",
-    codexSandbox: "workspace-write",
-    claudeCodeModel: "claude-sonnet-4",
-    claudeCodeMaxTurns: 4,
-    opencodeModel: "openai/gpt-5.5"
-  }
+configure({
+  ollamaHost: "http://192.168.1.20:11434",
+  ollamaModel: "qwen3:14b",
+  codexModel: "gpt-5.5",
+  codexSandbox: "workspace-write",
+  claudeCodeModel: "claude-sonnet-4",
+  claudeCodeMaxTurns: 4,
+  opencodeModel: "openai/gpt-5.5"
 });
 
-const tool = await connect("ollama", {
-  providerConfig: {
-    ollamaHost: "http://192.168.1.20:11434",
-    ollamaModel: "qwen3:14b"
-  }
-});
+const tools = await discover();
+const tool = await connect("ollama");
 ```
 
-This config takes precedence over environment variables for that call.
+This config takes precedence over environment variables until you call `configure()` again.
 
 ## Request And Response Examples
 
@@ -139,10 +133,6 @@ import { connect } from "switchboard-ai-sdk";
 const tool = await connect({
   capability: "chat",
   prefer: ["ollama", "codex", "opencode"]
-}, {
-  providerConfig: {
-    codexSandbox: "workspace-write"
-  }
 });
 ```
 

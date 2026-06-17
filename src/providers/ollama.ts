@@ -4,12 +4,12 @@ import {
   TimeoutError,
   ToolUnavailableError
 } from "../errors/errors.js";
+import { getProviderConfig } from "../config.js";
 import type { ProviderDefinition } from "../discovery/types.js";
 import type {
   ChatInput,
   ConnectedTool,
   DiscoveredTool,
-  ProviderConfig,
   ToolInvocationOptions
 } from "../types.js";
 import {
@@ -94,7 +94,8 @@ function normalizeOllamaChatResponse(result: OllamaChatResponse) {
   };
 }
 
-function getOllamaBaseUrl(config?: ProviderConfig): string {
+function getOllamaBaseUrl(): string {
+  const config = getProviderConfig();
   const configuredHost = config?.ollamaHost?.trim() ?? process.env.OLLAMA_HOST?.trim();
 
   if (!configuredHost) {
@@ -108,19 +109,19 @@ function getOllamaBaseUrl(config?: ProviderConfig): string {
   return `http://${configuredHost}`;
 }
 
-function getConfiguredOllamaModel(config?: ProviderConfig): string | undefined {
+function getConfiguredOllamaModel(): string | undefined {
+  const config = getProviderConfig();
   return getConfiguredModel("SWITCHBOARD_OLLAMA_MODEL", config?.ollamaModel);
 }
 
 async function requestOllama<T>(
   path: string,
-  init: RequestInit = {},
-  config?: ProviderConfig
+  init: RequestInit = {}
 ): Promise<T> {
   let response: Response;
 
   try {
-    response = await fetch(`${getOllamaBaseUrl(config)}${path}`, init);
+    response = await fetch(`${getOllamaBaseUrl()}${path}`, init);
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new TimeoutError();
@@ -144,14 +145,11 @@ async function requestOllama<T>(
   return response.json() as Promise<T>;
 }
 
-async function listOllamaModels(
-  signal?: AbortSignal,
-  config?: ProviderConfig
-): Promise<string[]> {
+async function listOllamaModels(signal?: AbortSignal): Promise<string[]> {
   const response = await requestOllama<OllamaTagsResponse>("/api/tags", {
     method: "GET",
     signal
-  }, config);
+  });
 
   return (response.models ?? []).map((model) => model.model ?? model.name);
 }
@@ -159,8 +157,7 @@ async function listOllamaModels(
 async function resolveOllamaModel(
   tool: DiscoveredTool,
   requestedModel?: string,
-  signal?: AbortSignal,
-  config?: ProviderConfig
+  signal?: AbortSignal
 ): Promise<string> {
   const selection = resolveRequestedModel(tool, requestedModel);
 
@@ -168,7 +165,7 @@ async function resolveOllamaModel(
     return selection.model;
   }
 
-  const configuredModel = getConfiguredOllamaModel(config);
+  const configuredModel = getConfiguredOllamaModel();
 
   if (configuredModel) {
     return configuredModel;
@@ -180,7 +177,7 @@ async function resolveOllamaModel(
     return discoveredDefaultModel;
   }
 
-  const availableModels = await listOllamaModels(signal, config);
+  const availableModels = await listOllamaModels(signal);
 
   if (availableModels.length === 0) {
     throw new ToolUnavailableError(
@@ -193,15 +190,15 @@ async function resolveOllamaModel(
 }
 
 export const ollamaProvider: ProviderDefinition = {
-  async discover(config) {
+  async discover() {
     try {
       const { stdout } = await executeCommand("ollama", ["--version"], {
         timeoutMs: DISCOVERY_TIMEOUT_MS
       });
 
       try {
-        const availableModels = await listOllamaModels(undefined, config);
-        const configuredModel = getConfiguredOllamaModel(config);
+        const availableModels = await listOllamaModels();
+        const configuredModel = getConfiguredOllamaModel();
 
         return {
           ...TOOL,
@@ -237,7 +234,7 @@ export const ollamaProvider: ProviderDefinition = {
       };
     }
   },
-  async connect(tool, config) {
+  async connect(tool) {
     if (!tool.available) {
       throw new ToolUnavailableError(tool.id);
     }
@@ -250,17 +247,12 @@ export const ollamaProvider: ProviderDefinition = {
       models: tool.models,
       defaultModel: tool.defaultModel,
       async health(options: ToolInvocationOptions = {}) {
-        const models = await listOllamaModels(options.signal, config);
+        const models = await listOllamaModels(options.signal);
         return models.length > 0;
       },
       async chat(input: ChatInput, options: ToolInvocationOptions = {}) {
         try {
-          const model = await resolveOllamaModel(
-            tool,
-            input.model,
-            options.signal,
-            config
-          );
+          const model = await resolveOllamaModel(tool, input.model, options.signal);
           const result = await requestOllama<OllamaChatResponse>(
             "/api/chat",
             {
@@ -275,8 +267,7 @@ export const ollamaProvider: ProviderDefinition = {
                 think: false
               }),
               signal: options.signal
-            },
-            config
+            }
           );
 
           return normalizeOllamaChatResponse(result);

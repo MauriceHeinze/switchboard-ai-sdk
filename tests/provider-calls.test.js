@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { configure } from "../dist/index.js";
 import { parseClaudeCodeJsonOutput } from "../dist/providers/claude-code.js";
 import { parseCodexExecJsonOutput } from "../dist/providers/codex.js";
 import {
@@ -199,13 +200,11 @@ test("buildOpenCodeArgs uses the selected model when provided", () => {
   }
 });
 
-test("buildOpenCodeArgs uses explicit provider config when no model is provided", () => {
-  assert.deepEqual(
-    buildOpenCodeArgs(
-      { prompt: "hello" },
-      { opencodeModel: "configured-through-api" }
-    ),
-    [
+test("buildOpenCodeArgs uses configured provider state when no model is provided", () => {
+  configure({ opencodeModel: "configured-through-api" });
+
+  try {
+    assert.deepEqual(buildOpenCodeArgs({ prompt: "hello" }), [
       "run",
       "--format",
       "json",
@@ -213,8 +212,10 @@ test("buildOpenCodeArgs uses explicit provider config when no model is provided"
       "configured-through-api",
       "--",
       "hello"
-    ]
-  );
+    ]);
+  } finally {
+    configure();
+  }
 });
 
 test("ollamaProvider chat uses the discovered default model", async () => {
@@ -245,20 +246,16 @@ test("ollamaProvider chat uses the discovered default model", async () => {
   };
 
   try {
-    const tool = await ollamaProvider.connect(
-      {
-        id: "ollama",
-        name: "Ollama",
-        type: "runtime",
-        available: true,
-        version: "0.1.0",
-        capabilities: ["chat", "health-check"],
-        defaultModel: "qwen3:14b"
-      },
-      {
-        ollamaHost: "http://127.0.0.1:22434"
-      }
-    );
+    configure({ ollamaHost: "http://127.0.0.1:22434" });
+    const tool = await ollamaProvider.connect({
+      id: "ollama",
+      name: "Ollama",
+      type: "runtime",
+      available: true,
+      version: "0.1.0",
+      capabilities: ["chat", "health-check"],
+      defaultModel: "qwen3:14b"
+    });
 
     const result = await tool.chat({
       messages: [{ role: "user", content: "hi" }]
@@ -274,6 +271,7 @@ test("ollamaProvider chat uses the discovered default model", async () => {
     });
     assert.equal(result.message.content, "OK");
   } finally {
+    configure();
     globalThis.fetch = originalFetch;
   }
 });

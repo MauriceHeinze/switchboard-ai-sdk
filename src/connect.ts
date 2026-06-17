@@ -5,18 +5,10 @@ import {
 } from "./errors/errors.js";
 import { discover } from "./discovery/discover.js";
 import { providerRegistry } from "./providers/index.js";
-import type {
-  ConnectInput,
-  ConnectedTool,
-  ConnectOptions,
-  ProviderId
-} from "./types.js";
+import type { ConnectInput, ConnectedTool, ProviderId } from "./types.js";
 
-export async function connect(
-  input: ConnectInput,
-  options: ConnectOptions = {}
-): Promise<ConnectedTool> {
-  const tools = await discover(options);
+export async function connect(input: ConnectInput): Promise<ConnectedTool> {
+  const tools = await discover();
 
   if (typeof input === "string") {
     const tool = tools.find((candidate) => candidate.id === input);
@@ -29,7 +21,7 @@ export async function connect(
       throw new ToolUnavailableError(tool.id, `${tool.name} is not available.`);
     }
 
-    return providerRegistry[tool.id].connect(tool, options.providerConfig);
+    return providerRegistry[tool.id].connect(tool);
   }
 
   const preferredOrder = input.prefer ?? [];
@@ -54,8 +46,5 @@ export async function connect(
     throw new CapabilityNotSupportedError(input.capability);
   }
 
-  return providerRegistry[matchedTool.id].connect(
-    matchedTool,
-    options.providerConfig
-  );
+  return providerRegistry[matchedTool.id].connect(matchedTool);
 }

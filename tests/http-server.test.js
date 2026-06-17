@@ -17,12 +17,8 @@ function createUrl(server, path) {
 }
 
 async function startServer(overrides = {}) {
-  let discoverConfig;
-  let connectConfig;
-
   providerRegistry.codex = {
-    async discover(config) {
-      discoverConfig = config;
+    async discover() {
       return {
         id: "codex",
         name: "Codex",
@@ -34,8 +30,7 @@ async function startServer(overrides = {}) {
         defaultModel: "gpt-5-codex"
       };
     },
-    async connect(tool, config) {
-      connectConfig = config;
+    async connect(tool) {
       return {
         id: tool.id,
         name: tool.name,
@@ -62,9 +57,7 @@ async function startServer(overrides = {}) {
   await once(server, "listening");
 
   return {
-    server,
-    getDiscoverConfig: () => discoverConfig,
-    getConnectConfig: () => connectConfig
+    server
   };
 }
 
@@ -141,27 +134,6 @@ test("GET /discover returns tools", async () => {
   }
 });
 
-test("GET /discover forwards providerConfig from query params", async () => {
-  const serverState = await startServer();
-
-  try {
-    const response = await fetch(
-      createUrl(
-        serverState.server,
-        "/discover?codexModel=gpt-5-user&codexSandbox=workspace-write"
-      )
-    );
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(serverState.getDiscoverConfig(), {
-      codexModel: "gpt-5-user",
-      codexSandbox: "workspace-write"
-    });
-  } finally {
-    await stopServer(serverState);
-  }
-});
-
 test("GET /health/:toolId reports unavailable tools", async () => {
   const serverState = await startServer({
     async discover() {
@@ -209,34 +181,6 @@ test("POST /chat/:toolId forwards chat calls", async () => {
     assert.equal(body.model, "gpt-5-codex");
     assert.deepEqual(body.result, {
       echoedMessages: [{ role: "user", content: "hello" }]
-    });
-  } finally {
-    await stopServer(serverState);
-  }
-});
-
-test("POST /chat/:toolId forwards providerConfig from the request body", async () => {
-  const serverState = await startServer();
-
-  try {
-    const response = await fetch(createUrl(serverState.server, "/chat/codex"), {
-      method: "POST",
-      headers: {
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        messages: [{ role: "user", content: "hello" }],
-        providerConfig: {
-          codexModel: "gpt-5-user",
-          codexSandbox: "danger-full-access"
-        }
-      })
-    });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(serverState.getConnectConfig(), {
-      codexModel: "gpt-5-user",
-      codexSandbox: "danger-full-access"
     });
   } finally {
     await stopServer(serverState);

@@ -1,4 +1,5 @@
 export { connect } from "./connect.js";
+export { configure } from "./config.js";
 export { discover } from "./discovery/discover.js";
 export {
   chatWithTool,
@@ -16,10 +17,8 @@ export type {
   CodexSandboxMode,
   ConnectByCapabilityOptions,
   ConnectInput,
-  ConnectOptions,
   ConnectedTool,
   DiscoveredTool,
-  DiscoverOptions,
   ProviderConfig,
   ProviderId,
   ToolMessage,
@@ -30,7 +29,6 @@ export type {
   ChatToolOptions,
   ChatToolRequest,
   ChatToolResponse,
-  DiscoverToolOptions,
   DiscoverResponse,
   HealthResponse,
   StartedSwitchboardServer,

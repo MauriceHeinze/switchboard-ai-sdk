@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import path from "node:path";
-import type { ProviderConfig } from "../types.js";
+import { getProviderConfig } from "../config.js";
 
 function normalizeConfiguredString(value?: string): string | undefined {
   const normalized = value?.trim();
@@ -58,9 +58,8 @@ async function readOptionalFile(filePath: string): Promise<string | undefined> {
   }
 }
 
-export async function getConfiguredCodexModel(
-  config?: ProviderConfig
-): Promise<string | undefined> {
+export async function getConfiguredCodexModel(): Promise<string | undefined> {
+  const config = getProviderConfig();
   const envModel = getConfiguredModel(
     "SWITCHBOARD_CODEX_MODEL",
     config?.codexModel
@@ -85,9 +84,8 @@ export async function getConfiguredCodexModel(
   return match?.[1]?.trim() || undefined;
 }
 
-export async function getConfiguredClaudeCodeModel(
-  config?: ProviderConfig
-): Promise<string | undefined> {
+export async function getConfiguredClaudeCodeModel(): Promise<string | undefined> {
+  const config = getProviderConfig();
   const envModel = getConfiguredModel(
     "SWITCHBOARD_CLAUDE_CODE_MODEL",
     config?.claudeCodeModel
