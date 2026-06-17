@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  parseOpenCodeExecutionFailure,
   parseOpenCodeAuthStatusOutput,
   opencodeProvider
 } from "../dist/providers/opencode.js";
@@ -141,6 +142,45 @@ test("parseOpenCodeAuthStatusOutput – preserves raw output", () => {
   const result = parseOpenCodeAuthStatusOutput(raw);
 
   assert.equal(result.output, raw);
+});
+
+test("parseOpenCodeExecutionFailure – token invalidated JSON returns auth error", () => {
+  const output = JSON.stringify({
+    type: "error",
+    error: {
+      name: "APIError",
+      data: {
+        message:
+          "Your authentication token has been invalidated. Please try signing in again.",
+        statusCode: 401
+      }
+    }
+  });
+
+  const result = parseOpenCodeExecutionFailure(output);
+
+  assert.equal(result.authError, true);
+  assert.match(
+    result.message ?? "",
+    /authentication token has been invalidated/i
+  );
+});
+
+test("parseOpenCodeExecutionFailure – non-auth JSON error stays non-auth", () => {
+  const output = JSON.stringify({
+    type: "error",
+    error: {
+      name: "APIError",
+      data: {
+        message: "Rate limit exceeded",
+        statusCode: 429
+      }
+    }
+  });
+
+  const result = parseOpenCodeExecutionFailure(output);
+
+  assert.equal(result.authError, false);
 });
 
 test("opencodeProvider.checkAuth delegates to CLI", async () => {

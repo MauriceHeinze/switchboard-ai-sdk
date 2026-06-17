@@ -135,8 +135,23 @@ function getProcessStderr(error: unknown): string {
   return "";
 }
 
-function isOpenCodeAuthError(stderr: string): boolean {
-  return /auth|login|api[_ -]?key|unauthorized|not logged in/i.test(stderr);
+function getProcessStdout(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "stdout" in error &&
+    typeof error.stdout === "string"
+  ) {
+    return error.stdout;
+  }
+
+  return "";
+}
+
+function isOpenCodeAuthError(output: string): boolean {
+  return /auth|login|api[_ -]?key|unauthorized|not logged in|token invalidated|token has been invalidated|401/i.test(
+    output
+  );
 }
 
 function stripAnsi(value: string): string {
@@ -315,6 +330,39 @@ export function parseOpenCodeJsonOutput(stdout: string): {
   };
 }
 
+function getOpenCodeExecutionFailureOutput(error: unknown): string {
+  return [getProcessStdout(error), getProcessStderr(error)]
+    .filter(Boolean)
+    .join("\n")
+    .trim();
+}
+
+export function parseOpenCodeExecutionFailure(
+  output: string
+): { authError: boolean; message?: string } {
+  if (!output) {
+    return { authError: false };
+  }
+
+  try {
+    parseOpenCodeJsonOutput(output);
+    return { authError: false };
+  } catch (error) {
+    if (error instanceof ProviderExecutionError) {
+      const authError = isOpenCodeAuthError(error.message) || isOpenCodeAuthError(output);
+
+      return {
+        authError,
+        message: authError ? error.message : undefined
+      };
+    }
+  }
+
+  return {
+    authError: isOpenCodeAuthError(output)
+  };
+}
+
 export const opencodeProvider: ProviderDefinition = {
   async discover() {
     try {
@@ -387,12 +435,14 @@ export const opencodeProvider: ProviderDefinition = {
             throw error;
           }
 
-          const stderr = getProcessStderr(error);
+          const failureOutput = getOpenCodeExecutionFailureOutput(error);
+          const failure = parseOpenCodeExecutionFailure(failureOutput);
 
-          if (isOpenCodeAuthError(stderr)) {
+          if (failure.authError) {
             throw new ToolAuthError(
               tool.id,
-              "OpenCode requires authentication before it can handle requests."
+              failure.message ??
+                "OpenCode requires authentication before it can handle requests."
             );
           }
 
