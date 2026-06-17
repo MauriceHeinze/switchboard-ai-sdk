@@ -59,16 +59,11 @@ function toDiscoverToolSummary(tool: {
   available: boolean;
   models?: string[];
 }): DiscoverToolSummary {
-  return tool.id === "ollama"
-    ? {
-        name: tool.name,
-        available: tool.available,
-        models: tool.models ?? []
-      }
-    : {
-        name: tool.name,
-        available: tool.available
-      };
+  return {
+    name: tool.name,
+    available: tool.available,
+    models: tool.models
+  };
 }
 
 function getToolId(pathname: string): ProviderId | undefined {

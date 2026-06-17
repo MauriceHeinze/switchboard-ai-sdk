@@ -103,7 +103,17 @@ test("GET /discover returns tools", async () => {
         (tool) =>
           tool.name === "Codex" &&
           tool.available === true &&
-          !("models" in tool)
+          Array.isArray(tool.models) &&
+          tool.models.includes("gpt-5-codex")
+      )
+    );
+    assert.ok(
+      body.tools.some(
+        (tool) =>
+          tool.name === "OpenCode" &&
+          tool.available === true &&
+          Array.isArray(tool.models) &&
+          tool.models.includes("openai/gpt-5.4")
       )
     );
     assert.ok(

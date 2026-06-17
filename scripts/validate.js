@@ -18,10 +18,11 @@ function assertToolSummary(tool) {
   assert.equal(typeof tool.name, "string");
   assert.equal(typeof tool.available, "boolean");
 
-  if (tool.name === "Ollama") {
-    assert.ok(Array.isArray(tool.models), "Ollama discover response must include models.");
-  } else {
-    assert.equal("models" in tool, false);
+  if ("models" in tool) {
+    assert.ok(
+      Array.isArray(tool.models),
+      `${tool.name} discover response models must be an array when present.`
+    );
   }
 }
 
