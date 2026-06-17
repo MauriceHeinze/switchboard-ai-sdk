@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo/logo_full.svg" alt="switchboard-ai logo" />
+</p>
+
 # switchboard-ai
 
 `switchboard-ai` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
