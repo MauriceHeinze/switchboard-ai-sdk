@@ -19,6 +19,8 @@ export type {
   ConnectedTool,
   DiscoveredTool,
   ProviderId,
+  ToolMessage,
+  ToolResult,
   ToolType
 } from "./types.js";
 export type {

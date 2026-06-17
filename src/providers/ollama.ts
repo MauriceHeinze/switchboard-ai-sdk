@@ -51,6 +51,48 @@ type OllamaChatResponse = {
   eval_duration?: number;
 };
 
+function normalizeOllamaChatResponse(result: OllamaChatResponse) {
+  const usage: Record<string, number> = {};
+
+  if (result.total_duration !== undefined) {
+    usage.total_duration = result.total_duration;
+  }
+
+  if (result.load_duration !== undefined) {
+    usage.load_duration = result.load_duration;
+  }
+
+  if (result.prompt_eval_count !== undefined) {
+    usage.prompt_eval_count = result.prompt_eval_count;
+  }
+
+  if (result.prompt_eval_duration !== undefined) {
+    usage.prompt_eval_duration = result.prompt_eval_duration;
+  }
+
+  if (result.eval_count !== undefined) {
+    usage.eval_count = result.eval_count;
+  }
+
+  if (result.eval_duration !== undefined) {
+    usage.eval_duration = result.eval_duration;
+  }
+
+  return {
+    message: {
+      role: "assistant" as const,
+      content: result.message.content
+    },
+    usage: Object.keys(usage).length > 0 ? usage : undefined,
+    metadata: {
+      model: result.model,
+      done: result.done,
+      doneReason: result.done_reason,
+      thinking: result.message.thinking
+    }
+  };
+}
+
 function getOllamaBaseUrl(): string {
   const configuredHost = process.env.OLLAMA_HOST?.trim();
 
@@ -222,7 +264,7 @@ export const ollamaProvider: ProviderDefinition = {
             signal: options.signal
           });
 
-          return result;
+          return normalizeOllamaChatResponse(result);
         } catch (error) {
           if (error instanceof TimeoutError || error instanceof ToolUnavailableError) {
             throw error;

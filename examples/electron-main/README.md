@@ -4,4 +4,4 @@
 
 # Electron Main Example
 
-This folder is reserved for the first MVP integration example.
+This example area is for Electron main-process integrations that discover a local tool, connect to it, send a prompt, and read the unified response shape.

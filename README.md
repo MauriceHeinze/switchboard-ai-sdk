@@ -13,13 +13,7 @@ It discovers and connects to local AI tools like:
 - Claude Code
 - OpenCode
 
-Use it when you want one integration layer for:
-
-- local LLMs in Electron
-- desktop app AI features
-- agentic coding tools on a developer machine
-- model discovery across multiple local AI providers
-- switching between Ollama, Codex, Claude Code, and OpenCode without rewriting your app
+Use it when you want one integration layer for local LLMs, coding agents, and desktop app AI features.
 
 ## Install
 
@@ -27,36 +21,37 @@ Use it when you want one integration layer for:
 npm install switchboard-ai
 ```
 
-## What It Does
-
-`switchboard-ai` gives you a unified way to:
-
-- discover which AI tools are available on the current machine
-- connect to a specific provider or to the first provider with a required capability
-- run agent-style tasks with tools like Codex, Claude Code, and OpenCode
-- chat with local Ollama models
-- expose the same functionality over a local HTTP server
-
 ## Quick Start
 
-Discover installed tools:
+Discover the tools that are available on the current machine, pick one, connect, and send a prompt:
 
 ```ts
-import { discover } from "switchboard-ai";
+import { connect, discover } from "switchboard-ai";
 
 const tools = await discover();
+const toolId = tools.find((tool) => tool.available)?.id;
 
-console.log(tools);
+if (!toolId) {
+  throw new Error("No local AI tool is available.");
+}
+
+const tool = await connect(toolId);
 ```
 
-Connect by provider:
+If the connected tool supports prompt-style runs:
 
 ```ts
-import { connect } from "switchboard-ai";
+const response = await tool.run?.({
+  prompt: "Summarize what this repository does in one paragraph."
+});
 
-const ollama = await connect("ollama");
+console.log(response?.message.content);
+```
 
-const result = await ollama.chat?.({
+If the connected tool supports chat messages:
+
+```ts
+const response = await tool.chat?.({
   messages: [
     {
       role: "user",
@@ -65,24 +60,7 @@ const result = await ollama.chat?.({
   ]
 });
 
-console.log(result);
-```
-
-Connect by capability:
-
-```ts
-import { connect } from "switchboard-ai";
-
-const tool = await connect({
-  capability: "code-analysis",
-  prefer: ["codex", "claude-code", "opencode"]
-});
-
-const result = await tool.run?.({
-  prompt: "Review the current repository structure and suggest three improvements."
-});
-
-console.log(result);
+console.log(response?.message.content);
 ```
 
 ## Supported Providers
@@ -93,6 +71,25 @@ console.log(result);
 | `codex` | agent | Code analysis and code editing workflows |
 | `claude-code` | agent | Agent-style coding tasks from the Claude CLI |
 | `opencode` | agent | Agent-style coding tasks from the OpenCode CLI |
+
+## Response Shape
+
+`run()`, `chat()`, and `callTool()` all return the same result shape:
+
+```ts
+{
+  message: {
+    role: "assistant",
+    content: "..."
+  },
+  usage: {
+    // optional numeric provider metrics
+  },
+  metadata: {
+    // optional provider-specific details
+  }
+}
+```
 
 ## Discover Models
 
@@ -131,10 +128,10 @@ const response = await callTool("codex", {
 });
 
 console.log(response.model);
-console.log(response.result);
+console.log(response.result.message.content);
 ```
 
-For Ollama chat:
+For chat-style requests:
 
 ```ts
 import { callTool } from "switchboard-ai";
@@ -143,13 +140,13 @@ const response = await callTool("ollama", {
   messages: [
     {
       role: "user",
-      content: "Explain the difference between agent-task and chat capabilities."
+      content: "Summarize this repository in one paragraph."
     }
   ],
   model: "llama3.1"
 });
 
-console.log(response.result);
+console.log(response.result.message.content);
 ```
 
 ## Run the Local HTTP Server
@@ -193,15 +190,6 @@ Useful configuration knobs include:
 - `SWITCHBOARD_CLAUDE_CODE_MAX_TURNS`
 - `SWITCHBOARD_OPENCODE_MODEL`
 
-## Use Cases
-
-Common ways to use `switchboard-ai`:
-
-- Add local AI to an Electron app without binding your UI to one provider.
-- Build a desktop app that prefers Ollama locally but can fall back to developer-oriented agent tools.
-- Detect which coding assistant is installed on a user's machine and adapt automatically.
-- Provide one integration layer for model discovery, health checks, and local tool execution.
-
 ## Repository Structure
 
 - [docs/README.md](docs/README.md) for usage notes and API behavior
@@ -210,12 +198,7 @@ Common ways to use `switchboard-ai`:
 
 ## Why This Project Is Different
 
-Many AI SDKs assume one hosted provider. `switchboard-ai` is for local-first AI tooling on developer machines:
-
-- local model discovery
-- CLI-based coding agents
-- Electron and desktop app integration
-- one TypeScript API across multiple local AI runtimes
+Many AI SDKs assume one hosted provider. `switchboard-ai` is focused on local-first AI tooling on developer machines with one TypeScript API across multiple local runtimes.
 
 ## License
 
