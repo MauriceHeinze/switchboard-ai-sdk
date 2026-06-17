@@ -48,6 +48,58 @@ const result = await tool.chat({
 console.log(result.message.content);
 ```
 
+## Request And Response Examples
+
+This is a direct `tool.chat()` request:
+
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with a short list of 5 ideas."
+    }
+  ]
+}
+```
+
+This is the equivalent SDK call:
+
+```ts
+const result = await tool.chat({
+  messages: [
+    {
+      role: "user",
+      content: "Reply with a short list of 5 ideas."
+    }
+  ]
+});
+```
+
+And this is a typical `tool.chat()` response:
+
+```json
+{
+  "message": {
+    "role": "assistant",
+    "content": "1. Start a community garden.  \n2. Learn a new language online.  \n3. Volunteer at a local animal shelter.  \n4. Try a new hobby like painting or photography.  \n5. Plan a short trip to a nearby town or city."
+  },
+  "usage": {
+    "total_duration": 5154960875,
+    "load_duration": 119292500,
+    "prompt_eval_count": 26,
+    "prompt_eval_duration": 323903000,
+    "eval_count": 53,
+    "eval_duration": 4710088000
+  },
+  "metadata": {
+    "model": "qwen3:14b",
+    "done": true,
+    "doneReason": "stop"
+  }
+}
+```
+
 ## Connect By Capability
 
 If your app cares about behavior instead of a specific provider, connect by capability and provide a preference order:
@@ -113,6 +165,24 @@ const result = await tool.chat(
       {
         role: "user",
         content: "Explain the main tradeoffs in this patch."
+      }
+    ]
+  },
+  {
+    timeoutMs: 30_000
+  }
+);
+```
+
+If you need timeout control, the request data and invocation options stay separate:
+
+```ts
+await tool.chat(
+  {
+    messages: [
+      {
+        role: "user",
+        content: "Reply with a short list of 5 ideas."
       }
     ]
   },
