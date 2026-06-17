@@ -1,10 +1,18 @@
 {
   "name": "switchboard-ai",
   "version": "0.1.0",
-  "description": "Connect your app to local AI tools.",
+  "description": "TypeScript SDK for connecting Electron and desktop apps to local AI tools like Ollama, Codex, Claude Code, and OpenCode through one API.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "homepage": "https://github.com/MauriceHeinze/switchboard-ai#readme",
+  "bugs": {
+    "url": "https://github.com/MauriceHeinze/switchboard-ai/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MauriceHeinze/switchboard-ai.git"
+  },
   "files": [
     "dist"
   ],
@@ -17,10 +25,21 @@
   },
   "keywords": [
     "ai",
+    "ai-sdk",
+    "agent-runtime",
+    "desktop-ai",
     "electron",
+    "electron-ai",
     "codex",
     "claude-code",
     "ollama",
+    "opencode",
+    "local-llm",
+    "local-ai",
+    "typescript-sdk",
+    "model-discovery",
+    "ai-tooling",
+    "developer-tools",
     "local-first"
   ],
   "license": "MIT",
