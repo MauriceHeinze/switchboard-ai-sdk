@@ -23,7 +23,9 @@ If you use OpenCode and do not have, or do not want to provide, a paid AI subscr
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
-When a tool requires a local CLI login, the SDK can surface that auth flow through the local server so app developers can show a clear handoff instead of a vague failure state:
+### How this works in practice
+
+Give users the freedom to select the AI tool they want, or steer them toward your recommendation. ```switchboard-ai-sdk``` supports the full flow end to end.
 
 ![Authentication screen example](docs/images/auth-screen.png)
 
