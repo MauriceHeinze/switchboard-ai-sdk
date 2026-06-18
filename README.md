@@ -6,7 +6,7 @@
 
 `switchboard-ai-sdk` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
-This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md).
+This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/SDK-USAGE.md](docs/SDK-USAGE.md).
 The published npm package name is `switchboard-ai-sdk`.
 
 It discovers and connects to local AI tools like:
@@ -120,7 +120,7 @@ const tool = await connect("codex");
 
 All subsequent SDK and server calls use that config until you call `configure()` again.
 
-See [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
+See [docs/SDK-USAGE.md](docs/SDK-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
 
 ## Supported Providers
 
