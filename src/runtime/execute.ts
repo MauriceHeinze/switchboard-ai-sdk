@@ -10,6 +10,7 @@ export type SpawnInteractiveCommandOptions = {
   timeoutMs?: number;
   signal?: AbortSignal;
   captureWindowMs?: number;
+  keepRunning?: boolean;
 };
 
 export async function executeCommand(
@@ -102,6 +103,7 @@ export async function spawnInteractiveCommand(
   options: SpawnInteractiveCommandOptions = {}
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   const captureWindowMs = options.captureWindowMs ?? 1_500;
+  const keepRunning = options.keepRunning ?? false;
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -110,6 +112,7 @@ export async function spawnInteractiveCommand(
     let exitCode: number | null = null;
 
     const child = spawn(command, args, {
+      detached: keepRunning,
       stdio: ["ignore", "pipe", "pipe"]
     });
 
@@ -129,8 +132,16 @@ export async function spawnInteractiveCommand(
       settled = true;
       cleanup();
 
-      if (!child.killed) {
+      if (!keepRunning && !child.killed) {
         child.kill();
+      }
+
+      if (keepRunning) {
+        child.stdout?.removeAllListeners("data");
+        child.stderr?.removeAllListeners("data");
+        child.stdout?.destroy();
+        child.stderr?.destroy();
+        child.unref();
       }
 
       resolve({

@@ -254,7 +254,8 @@ async function startClaudeCodeAuth(
       {
         signal: options.signal,
         timeoutMs: options.timeoutMs,
-        captureWindowMs: 1_500
+        captureWindowMs: 1_500,
+        keepRunning: true
       }
     );
     const output = [stdout, stderr].filter(Boolean).join("\n").trim();
