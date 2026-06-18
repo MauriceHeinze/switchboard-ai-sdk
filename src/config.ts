@@ -7,7 +7,7 @@ const ALLOWED_SANDBOX_MODES = new Set<CodexSandboxMode>([
   "danger-full-access"
 ]);
 
-export function configure(config: ProviderConfig = {}): void {
+export function validateProviderConfig(config: ProviderConfig = {}): ProviderConfig {
   if (config.ollamaHost !== undefined && typeof config.ollamaHost !== "string") {
     throw new TypeError("ollamaHost must be a string.");
   }
@@ -50,13 +50,19 @@ export function configure(config: ProviderConfig = {}): void {
     throw new TypeError("opencodeModel must be a string.");
   }
 
-  providerConfig = {
-    ...config,
-    claudeCodeMaxTurns:
-      config.claudeCodeMaxTurns !== undefined
-        ? Math.trunc(config.claudeCodeMaxTurns)
-        : undefined
+  const validatedConfig: ProviderConfig = {
+    ...config
   };
+
+  if (config.claudeCodeMaxTurns !== undefined) {
+    validatedConfig.claudeCodeMaxTurns = Math.trunc(config.claudeCodeMaxTurns);
+  }
+
+  return validatedConfig;
+}
+
+export function configure(config: ProviderConfig = {}): void {
+  providerConfig = validateProviderConfig(config);
 }
 
 export function getProviderConfig(): ProviderConfig {

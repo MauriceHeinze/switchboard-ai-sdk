@@ -4,9 +4,10 @@
 
 # switchboard-ai-sdk
 
-`switchboard-ai-sdk` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
+`switchboard-ai-sdk` is a TypeScript SDK for connecting locally running JavaScript apps to local  AI tools like Codex through one API.
 
 This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/SDK-USAGE.md](docs/SDK-USAGE.md).
+
 The published npm package name is `switchboard-ai-sdk`.
 
 It discovers and connects to local AI tools like:
@@ -16,7 +17,8 @@ It discovers and connects to local AI tools like:
 - Claude Code
 - OpenCode
 
-It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they already have, like Codex, Claude Code, OpenCode, or Ollama.
+It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they or their users already have, like Codex, Claude Code, OpenCode, or Ollama.
+
 If you use OpenCode and do not have, or do not want to provide, a paid AI subscription, you can point it at OpenCode's free hosted models.
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
@@ -47,7 +49,7 @@ const tool = await connect(toolId);
 ```
 
 ```ts
-const response = await tool.chat?.({
+const response = await tool.chat({
   messages: [
     {
       role: "user",
@@ -75,10 +77,7 @@ Example:
 ```ts
 import { connect } from "switchboard-ai-sdk";
 
-const tool = await connect({
-  capability: "chat",
-  prefer: ["ollama", "codex", "opencode"]
-});
+const tool = await connect("ollama");
 
 const result = await tool.chat(
   {
@@ -99,7 +98,7 @@ console.log(result.message.content);
 
 ## Provider Config
 
-Call `configure()` before `connect()` or before starting the HTTP server when you want global defaults for the current process. In most apps, you call it once during startup and reuse that config until you need to change it.
+Call `configure()` before `connect()` or before starting the HTTP server when you want to overwrite global defaults for the current process. In most apps, you call it once during startup and reuse that config until you need to change it.
 
 You can set provider-specific values once instead of passing them on every call:
 
@@ -122,16 +121,7 @@ const tool = await connect("codex");
 
 All subsequent SDK and server calls in the current process use that config until you call `configure()` again.
 
-If you are using the direct SDK, catch errors like `ToolUnavailableError` and `TimeoutError` around `connect()` and `tool.chat()`. See [docs/SDK-USAGE.md](docs/SDK-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
-
-## Supported Providers
-
-| Provider | Type | Typical use |
-| --- | --- | --- |
-| `ollama` | runtime | Local chat and local model access |
-| `codex` | agent | Code analysis and code editing workflows |
-| `claude-code` | agent | Agent-style coding tasks from the Claude CLI |
-| `opencode` | agent | Agent-style coding tasks from the OpenCode CLI |
+See [docs/SDK-USAGE.md](docs/SDK-USAGE.md) for more details.
 
 ## Discover Models
 
@@ -154,11 +144,14 @@ for (const tool of tools) {
 
 Current behavior:
 
-- Ollama returns installed local models.
+- Ollama and OpenCode  return all available models.
 - Codex and Claude Code return configured models when one is explicitly set.
-- OpenCode can expose its available models through the CLI, and you can also set `SWITCHBOARD_OPENCODE_MODEL` directly.
 
 OpenCode's model lineup changes frequently, so this README does not try to mirror it. Check the official OpenCode model docs for the current provider and model format: <https://opencode.ai/docs/models/>.
+
+For OpenCode Go subscriptions: <https://opencode.ai/docs/go/>
+
+Opencode also offers free and strong models like DeepSeek V4 Flash that you can use.
 
 ## Run the Local HTTP Server
 
@@ -178,11 +171,16 @@ console.log(server.url);
 
 Endpoints:
 
-- `GET /health`
-- `GET /discover`
-- `POST /auth/:toolId`
-- `POST /chat/:toolId`
-- `GET /health/:toolId`
+| Method | Path | Endpoint |
+|---|---|---|
+| GET | `/config` | Read the current process-level provider config |
+| PUT | `/config` | Replace the current process-level provider config |
+| GET | `/health` | See health and auth status of all AI tools |
+| GET | `/discover` | Discover available AI tools |
+| POST | `/auth/:toolId` | Start authenticatation process for specific AI tool   |
+| POST | `/chat/:toolId` | Send prompt to specific AI tool |
+| GET | `/health/:toolId` | Get health status of specific AI tool |
+
 
 ```bash
 curl http://127.0.0.1:3000/discover
@@ -194,19 +192,38 @@ Example response:
 {
   "tools": [
     {
+      "id": "codex",
       "name": "Codex",
-      "available": true
+      "type": "agent",
+      "available": true,
+      "version": "1.2.3",
+      "capabilities": ["agent-task", "health-check"],
+      "models": ["gpt-5-codex"],
+      "defaultModel": "gpt-5-codex"
     },
     {
+      "id": "ollama",
       "name": "Ollama",
+      "type": "runtime",
       "available": true,
-      "models": ["qwen3:14b"]
+      "version": "0.8.0",
+      "capabilities": ["chat", "health-check"],
+      "models": ["qwen3:14b"],
+      "defaultModel": "qwen3:14b"
     }
   ]
 }
 ```
 
-This endpoint is intentionally slimmer than the SDK's `discover()` output. If you are already in Node.js or Electron, prefer the direct SDK and catch typed exceptions there. Use the server when HTTP responses and JSON error payloads are a better fit for the caller.
+You can also configure provider defaults once over HTTP instead of repeating them on every request:
+
+```bash
+curl -X PUT http://127.0.0.1:3000/config \
+  -H "content-type: application/json" \
+  -d '{"codexModel":"gpt-5.5","codexSandbox":"workspace-write"}'
+```
+
+The HTTP API now mirrors the full discovery payload and process-level config behavior. If you are already in Node.js or Electron, prefer the direct SDK when you want in-process objects and typed exceptions. Use the server when HTTP responses and JSON error payloads are a better fit for the caller.
 
 ## Environment Variables
 

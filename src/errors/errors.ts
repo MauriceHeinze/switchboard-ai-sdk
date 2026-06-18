@@ -19,13 +19,6 @@ export class ToolAuthError extends Error {
   }
 }
 
-export class CapabilityNotSupportedError extends Error {
-  constructor(capability: string) {
-    super(`No available provider supports the capability "${capability}".`);
-    this.name = "CapabilityNotSupportedError";
-  }
-}
-
 export class ProviderExecutionError extends Error {
   constructor(toolId: string, message?: string) {
     super(message ?? `The provider "${toolId}" failed to execute the request.`);

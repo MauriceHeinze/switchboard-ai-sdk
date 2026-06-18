@@ -123,20 +123,15 @@ And this is a typical `tool.chat()` response:
 }
 ```
 
-## Connect By Capability
+## Connect By Provider Id
 
-If your app cares about behavior instead of a specific provider, connect by capability and provide a preference order:
+Connect to the specific local provider your app wants to use:
 
 ```ts
 import { connect } from "switchboard-ai-sdk";
 
-const tool = await connect({
-  capability: "chat",
-  prefer: ["ollama", "codex", "opencode"]
-});
+const tool = await connect("ollama");
 ```
-
-This lets the SDK choose the first available provider that supports the requested capability.
 
 ## Inspect Models Before Calling
 
@@ -232,7 +227,6 @@ Direct SDK usage throws typed errors instead of returning HTTP status codes:
 
 - `ToolNotFoundError`
 - `ToolUnavailableError`
-- `CapabilityNotSupportedError`
 - `ProviderExecutionError`
 - `TimeoutError`
 - `ToolAuthError`

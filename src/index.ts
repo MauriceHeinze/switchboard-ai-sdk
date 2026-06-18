@@ -17,8 +17,6 @@ export type {
   Capability,
   ChatInput,
   CodexSandboxMode,
-  ConnectByCapabilityOptions,
-  ConnectInput,
   ConnectedTool,
   DiscoveredTool,
   ProviderConfig,
@@ -31,6 +29,7 @@ export type {
   ChatToolOptions,
   ChatToolRequest,
   ChatToolResponse,
+  ConfigResponse,
   DiscoverResponse,
   AggregateHealthResponse,
   HealthResponse,
@@ -39,11 +38,11 @@ export type {
   ToolAuthResponse,
   ToolHealthResult,
   ToolHealthStatus,
-  ToolOperationOptions
+  ToolOperationOptions,
+  UpdateConfigRequest
 } from "./server/types.js";
 
 export {
-  CapabilityNotSupportedError,
   ProviderExecutionError,
   TimeoutError,
   ToolAuthError,

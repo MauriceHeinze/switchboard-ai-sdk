@@ -5,7 +5,9 @@ import {
   checkAllToolsHealth,
   checkToolHealth,
   chatWithTool,
-  startToolAuth
+  getServerConfig,
+  startToolAuth,
+  updateServerConfig
 } from "./service.js";
 import {
   ProviderExecutionError,
@@ -14,12 +16,13 @@ import {
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
-import type { ChatInput, ProviderId } from "../types.js";
+import { validateProviderConfig } from "../config.js";
+import type { ChatInput, ProviderConfig, ProviderId } from "../types.js";
 import type {
   ChatToolRequest,
-  DiscoverToolSummary,
   DiscoverResponse,
   AggregateHealthResponse,
+  ConfigResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions
 } from "./types.js";
@@ -59,19 +62,6 @@ function writeError(
       message
     }
   } satisfies JsonError);
-}
-
-function toDiscoverToolSummary(tool: {
-  id: string;
-  name: string;
-  available: boolean;
-  models?: string[];
-}): DiscoverToolSummary {
-  return {
-    name: tool.name,
-    available: tool.available,
-    models: tool.models
-  };
 }
 
 function getToolId(pathname: string): ProviderId | undefined {
@@ -141,6 +131,14 @@ function validateChatRequest(body: unknown): ChatToolRequest {
   }
 
   throw new TypeError("Request body must include messages.");
+}
+
+function validateConfigRequest(body: unknown): ProviderConfig {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new TypeError("Request body must be a JSON object.");
+  }
+
+  return validateProviderConfig(body as ProviderConfig);
 }
 
 function getTimeoutMs(
@@ -228,6 +226,19 @@ export function createSwitchboardServer(
         return;
       }
 
+      if (method === "GET" && url.pathname === "/config") {
+        writeJson(response, 200, getServerConfig() satisfies ConfigResponse);
+        return;
+      }
+
+      if (method === "PUT" && url.pathname === "/config") {
+        const body = await readJsonBody(request);
+        const config = validateConfigRequest(body);
+
+        writeJson(response, 200, updateServerConfig(config) satisfies ConfigResponse);
+        return;
+      }
+
       if (method === "POST" && url.pathname.startsWith("/auth/")) {
         const toolId = getToolId(url.pathname);
 
@@ -248,7 +259,7 @@ export function createSwitchboardServer(
         const tools = await discoverTools();
 
         writeJson(response, 200, {
-          tools: tools.map(toDiscoverToolSummary)
+          tools
         } satisfies DiscoverResponse);
         return;
       }

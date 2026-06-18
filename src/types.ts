@@ -105,10 +105,3 @@ export type ConnectedTool = {
   startAuth?(options?: ToolInvocationOptions): Promise<ToolAuthStartResult>;
   chat(input: ChatInput, options?: ToolInvocationOptions): Promise<ToolResult>;
 };
-
-export type ConnectByCapabilityOptions = {
-  capability: Capability;
-  prefer?: ProviderId[];
-};
-
-export type ConnectInput = ProviderId | ConnectByCapabilityOptions;

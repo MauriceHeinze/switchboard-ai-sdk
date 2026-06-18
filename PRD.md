@@ -80,7 +80,7 @@ The project should let a developer:
 
 - discover available local AI providers
 - understand what each provider supports
-- choose a provider by id or by capability
+- choose a provider by id
 - send requests through a consistent interface
 - check health and auth state before use
 - add AI features without building provider-specific wrappers
@@ -130,7 +130,7 @@ Current top-level API:
 
 - `configure(config)`
 - `discover()`
-- `connect(providerId | { capability, prefer? })`
+- `connect(providerId)`
 - connected tool methods such as `chat()`, `health()`, `checkAuth()`, and `startAuth()` where supported
 
 ### Optional Local HTTP Bridge
@@ -143,6 +143,8 @@ Current server entrypoint:
 
 Current endpoints:
 
+- `GET /config`
+- `PUT /config`
 - `GET /health`
 - `GET /health/:toolId`
 - `GET /discover`
@@ -235,7 +237,7 @@ Current notable behavior:
 
 ## 12. Capability Model
 
-The SDK exposes a normalized capability layer so apps can pick tools by behavior instead of hard-coding provider names.
+The SDK exposes normalized capability metadata so apps can inspect tool behavior without hard-coding provider assumptions.
 
 Current capability examples include:
 
@@ -249,7 +251,7 @@ Current capability examples include:
 
 Principle:
 
-- capabilities help selection
+- capabilities help inspection
 - provider identity remains visible in the returned tool metadata
 
 ## 13. Developer Experience
@@ -259,7 +261,7 @@ Principle:
 The core flow is:
 
 1. Discover available tools.
-2. Pick a provider by id or capability.
+2. Pick a provider by id.
 3. Connect.
 4. Call `chat()`.
 5. Optionally check health or auth state before requests.
@@ -284,17 +286,6 @@ const result = await tool.chat({
       content: "Summarize the main idea in one paragraph."
     }
   ]
-});
-```
-
-### Example Capability-Based Flow
-
-```ts
-import { connect } from "switchboard-ai-sdk";
-
-const tool = await connect({
-  capability: "chat",
-  prefer: ["ollama", "codex", "opencode"]
 });
 ```
 
@@ -333,13 +324,12 @@ Current error types:
 - `ToolNotFoundError`
 - `ToolUnavailableError`
 - `ToolAuthError`
-- `CapabilityNotSupportedError`
 - `ProviderExecutionError`
 - `TimeoutError`
 
 Product requirement:
 
-- errors should tell developers whether the issue is discovery, auth, timeout, unsupported capability, or provider execution failure
+- errors should tell developers whether the issue is discovery, auth, timeout, or provider execution failure
 
 ## 16. Security and Safety
 

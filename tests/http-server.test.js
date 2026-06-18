@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { configure } from "../dist/index.js";
 import { createSwitchboardServer } from "../dist/server/http.js";
+import { getProviderConfig } from "../dist/config.js";
 import { providerRegistry } from "../dist/providers/index.js";
 
 const ORIGINAL_CODEX_PROVIDER = providerRegistry.codex;
@@ -118,6 +120,9 @@ async function startServer(overrides = {}) {
 
   providerRegistry.codex = {
     async discover() {
+      const config = getProviderConfig();
+      const configuredModel = config.codexModel;
+
       return {
         id: "codex",
         name: "Codex",
@@ -125,8 +130,8 @@ async function startServer(overrides = {}) {
         available: true,
         version: "1.2.3",
         capabilities: ["agent-task", "health-check"],
-        models: ["gpt-5-codex"],
-        defaultModel: "gpt-5-codex"
+        models: configuredModel ? [configuredModel] : ["gpt-5-codex"],
+        defaultModel: configuredModel ?? "gpt-5-codex"
       };
     },
     async connect(tool) {
@@ -180,7 +185,12 @@ async function stopServer(serverState) {
   providerRegistry["claude-code"] = ORIGINAL_CLAUDE_PROVIDER;
   providerRegistry.ollama = ORIGINAL_OLLAMA_PROVIDER;
   providerRegistry.opencode = ORIGINAL_OPENCODE_PROVIDER;
+  configure();
 }
+
+test.afterEach(() => {
+  assert.deepEqual(getProviderConfig(), {});
+});
 
 test("GET /health returns server liveness without auth", async () => {
   const serverState = await startServer();
@@ -218,17 +228,26 @@ test("GET /discover returns tools", async () => {
     assert.ok(
       body.tools.some(
         (tool) =>
+          tool.id === "codex" &&
           tool.name === "Codex" &&
+          tool.type === "agent" &&
           tool.available === true &&
+          tool.version === "1.2.3" &&
+          Array.isArray(tool.capabilities) &&
+          tool.capabilities.includes("agent-task") &&
           Array.isArray(tool.models) &&
-          tool.models.includes("gpt-5-codex")
+          tool.models.includes("gpt-5-codex") &&
+          tool.defaultModel === "gpt-5-codex"
       )
     );
     assert.ok(
       body.tools.some(
         (tool) =>
+          tool.id === "opencode" &&
           tool.name === "OpenCode" &&
           tool.available === true &&
+          tool.type === "agent" &&
+          tool.version === "0.8.0" &&
           Array.isArray(tool.models) &&
           tool.models.includes("openai/gpt-5.4")
       )
@@ -236,12 +255,128 @@ test("GET /discover returns tools", async () => {
     assert.ok(
       body.tools.some(
         (tool) =>
+          tool.id === "ollama" &&
           tool.name === "Ollama" &&
           tool.available === true &&
+          tool.type === "runtime" &&
+          tool.version === "0.8.0" &&
           Array.isArray(tool.models) &&
-          tool.models.includes("qwen3:14b")
+          tool.models.includes("qwen3:14b") &&
+          tool.defaultModel === "qwen3:14b"
       )
     );
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("GET /config returns the current process config", async () => {
+  const serverState = await startServer();
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/config"));
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, {
+      config: {}
+    });
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("PUT /config replaces process config for later requests", async () => {
+  const serverState = await startServer();
+
+  try {
+    const updateResponse = await fetch(createUrl(serverState.server, "/config"), {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        codexModel: "gpt-5.5",
+        codexSandbox: "workspace-write",
+        claudeCodeMaxTurns: 4
+      })
+    });
+    const updateBody = await updateResponse.json();
+
+    assert.equal(updateResponse.status, 200);
+    assert.deepEqual(updateBody, {
+      config: {
+        codexModel: "gpt-5.5",
+        codexSandbox: "workspace-write",
+        claudeCodeMaxTurns: 4
+      }
+    });
+
+    const configResponse = await fetch(createUrl(serverState.server, "/config"));
+    const configBody = await configResponse.json();
+    assert.deepEqual(configBody, updateBody);
+
+    const discoverResponse = await fetch(createUrl(serverState.server, "/discover"));
+    const discoverBody = await discoverResponse.json();
+    const codex = discoverBody.tools.find((tool) => tool.id === "codex");
+
+    assert.equal(codex.defaultModel, "gpt-5.5");
+    assert.deepEqual(codex.models, ["gpt-5.5"]);
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("PUT /config with an empty object resets process config", async () => {
+  const serverState = await startServer();
+
+  try {
+    await fetch(createUrl(serverState.server, "/config"), {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        codexModel: "gpt-5.5"
+      })
+    });
+
+    const resetResponse = await fetch(createUrl(serverState.server, "/config"), {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    const resetBody = await resetResponse.json();
+
+    assert.equal(resetResponse.status, 200);
+    assert.deepEqual(resetBody, {
+      config: {}
+    });
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("PUT /config validates config payloads", async () => {
+  const serverState = await startServer();
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/config"), {
+      method: "PUT",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        claudeCodeMaxTurns: 0
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 400);
+    assert.equal(body.error.code, "invalid_request");
+    assert.match(body.error.message, /claudeCodeMaxTurns must be a positive number/);
   } finally {
     await stopServer(serverState);
   }

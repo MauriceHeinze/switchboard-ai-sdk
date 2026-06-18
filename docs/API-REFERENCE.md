@@ -59,7 +59,7 @@ type DiscoveredTool = {
 };
 ```
 
-### `connect(input)`
+### `connect(providerId)`
 
 Connect by provider id:
 
@@ -67,15 +67,6 @@ Connect by provider id:
 import { connect } from "switchboard-ai-sdk";
 
 const tool = await connect("ollama");
-```
-
-Connect by capability:
-
-```ts
-const tool = await connect({
-  capability: "chat",
-  prefer: ["ollama", "codex", "opencode"]
-});
 ```
 
 `connect()` returns a `ConnectedTool`:
@@ -143,7 +134,6 @@ Direct SDK calls throw typed errors:
 
 - `ToolNotFoundError`
 - `ToolUnavailableError`
-- `CapabilityNotSupportedError`
 - `ProviderExecutionError`
 - `TimeoutError`
 - `ToolAuthError`
@@ -154,29 +144,98 @@ Use the HTTP server only if you want those failures translated into HTTP statuse
 
 This is what the validator output looks like when local tools are available:
 
+### `GET /config`
+
+```json
+{
+  "config": {
+    "codexModel": "gpt-5.5",
+    "codexSandbox": "workspace-write"
+  }
+}
+```
+
+### `PUT /config`
+
+Request:
+
+```json
+{
+  "codexModel": "gpt-5.5",
+  "codexSandbox": "workspace-write"
+}
+```
+
+Response:
+
+```json
+{
+  "config": {
+    "codexModel": "gpt-5.5",
+    "codexSandbox": "workspace-write"
+  }
+}
+```
+
 ### `GET /discover`
 
 ```json
 {
   "tools": [
     {
+      "id": "claude-code",
       "name": "Claude Code",
-      "available": true
-    },
-    {
-      "name": "Codex",
-      "available": true
-    },
-    {
-      "name": "Ollama",
+      "type": "agent",
       "available": true,
-      "models": [
-        "qwen3:14b"
+      "version": "0.9.0",
+      "capabilities": [
+        "agent-task",
+        "health-check"
       ]
     },
     {
+      "id": "codex",
+      "name": "Codex",
+      "type": "agent",
+      "available": true,
+      "version": "1.2.3",
+      "capabilities": [
+        "agent-task",
+        "health-check"
+      ],
+      "models": [
+        "gpt-5-codex"
+      ],
+      "defaultModel": "gpt-5-codex"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "type": "runtime",
+      "available": true,
+      "version": "0.8.0",
+      "capabilities": [
+        "chat",
+        "health-check"
+      ],
+      "models": [
+        "qwen3:14b"
+      ],
+      "defaultModel": "qwen3:14b"
+    },
+    {
+      "id": "opencode",
       "name": "OpenCode",
-      "available": true
+      "type": "agent",
+      "available": true,
+      "version": "0.8.0",
+      "capabilities": [
+        "agent-task",
+        "health-check"
+      ],
+      "models": [
+        "openai/gpt-5.4"
+      ]
     }
   ]
 }
@@ -328,7 +387,25 @@ For OpenCode, the currently supported model names are easiest to understand in t
 - Hosted `opencode-go` models: `opencode-go/deepseek-v4-flash`, `opencode-go/deepseek-v4-pro`, `opencode-go/glm-5.1`, `opencode-go/glm-5.2`, `opencode-go/kimi-k2.6`, `opencode-go/kimi-k2.7-code`, `opencode-go/mimo-v2.5`, `opencode-go/mimo-v2.5-pro`, `opencode-go/minimax-m2.7`, `opencode-go/minimax-m3`, `opencode-go/qwen3.6-plus`, `opencode-go/qwen3.7-max`, `opencode-go/qwen3.7-plus`
 - OpenAI-backed models available through OpenCode: `openai/gpt-5.3-codex-spark`, `openai/gpt-5.4`, `openai/gpt-5.4-fast`, `openai/gpt-5.4-mini`, `openai/gpt-5.4-mini-fast`, `openai/gpt-5.5`, `openai/gpt-5.5-fast`, `openai/gpt-5.5-pro`
 
-The HTTP `GET /discover` endpoint is intentionally slimmer than the library API:
+## HTTP Error Envelope
 
-- all providers return only `name` and `available`
-- Ollama additionally returns `models`
+All HTTP endpoint errors use this shape:
+
+```json
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "claudeCodeMaxTurns must be a positive number."
+  }
+}
+```
+
+Current error mapping:
+
+- `400 invalid_request`
+- `401 tool_auth_required`
+- `404 tool_not_found`
+- `502 provider_execution_failed`
+- `503 tool_unavailable`
+- `504 timeout`
+- `500 internal_error`

@@ -1,4 +1,5 @@
 import { connect } from "../connect.js";
+import { configure, getProviderConfig } from "../config.js";
 import { discover } from "../discovery/discover.js";
 import { providerRegistry } from "../providers/index.js";
 import {
@@ -20,6 +21,8 @@ import type {
   ChatToolOptions,
   ChatToolRequest,
   ChatToolResponse,
+  ConfigResponse,
+  UpdateConfigRequest,
   ToolAuthResponse,
   ToolHealthResult,
   ToolOperationOptions
@@ -267,6 +270,18 @@ async function buildToolHealthResult(
 
 export async function discoverTools() {
   return discover();
+}
+
+export function getServerConfig(): ConfigResponse {
+  return {
+    config: getProviderConfig()
+  };
+}
+
+export function updateServerConfig(config: UpdateConfigRequest): ConfigResponse {
+  configure(config);
+
+  return getServerConfig();
 }
 
 export async function checkAllToolsHealth(

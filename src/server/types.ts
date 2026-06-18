@@ -1,7 +1,9 @@
 import type {
   AuthStatus,
   ChatInput,
+  DiscoveredTool,
   ProviderId,
+  ProviderConfig,
   ToolAuthStartStatus,
   ToolResult,
   ToolType
@@ -22,15 +24,15 @@ export type ToolHealthResult = {
   checkedAt: string;
 };
 
-export type DiscoverToolSummary = {
-  name: string;
-  available: boolean;
-  models?: string[];
+export type DiscoverResponse = {
+  tools: DiscoveredTool[];
 };
 
-export type DiscoverResponse = {
-  tools: DiscoverToolSummary[];
+export type ConfigResponse = {
+  config: ProviderConfig;
 };
+
+export type UpdateConfigRequest = ProviderConfig;
 
 export type HealthResponse = ToolHealthResult;
 
