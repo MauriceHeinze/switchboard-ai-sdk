@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="logo/logo_full.svg" alt="switchboard-ai logo" />
+  <img src="logo/logo_full.svg" alt="switchboard-ai-sdk logo" />
 </p>
 
-# switchboard-ai
+# switchboard-ai-sdk
 
-`switchboard-ai` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
+`switchboard-ai-sdk` is a TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
 This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/DIRECT-USAGE.md](docs/DIRECT-USAGE.md).
 The published npm package name is `switchboard-ai-sdk`.

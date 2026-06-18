@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="../logo/logo_full.svg" alt="switchboard-ai logo" />
+  <img src="../logo/logo_full.svg" alt="switchboard-ai-sdk logo" />
 </p>
 
 # API Reference
 
-Technical reference for `switchboard-ai`. The published npm package name is `switchboard-ai-sdk`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md). For the direct non-HTTP integration flow, see [DIRECT-USAGE.md](./DIRECT-USAGE.md).
+Technical reference for `switchboard-ai-sdk`. The published npm package name is `switchboard-ai-sdk`. For installation, positioning, and the getting-started flow, start with the root [README.md](../README.md). For the direct non-HTTP integration flow, see [DIRECT-USAGE.md](./DIRECT-USAGE.md).
 
 ## Direct SDK API
 

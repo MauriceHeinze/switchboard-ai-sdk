@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../logo/logo_icon.svg" alt="switchboard-ai icon" width="72" height="72" />
+  <img src="../logo/logo_icon.svg" alt="switchboard-ai-sdk icon" width="72" height="72" />
 </p>
 
 # Direct SDK Usage

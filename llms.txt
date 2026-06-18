@@ -1,10 +1,10 @@
-# switchboard-ai
+# switchboard-ai-sdk
 
 > TypeScript SDK for connecting Electron apps, desktop apps, and local developer tools to AI runtimes through one API.
 
 ## Summary
 
-switchboard-ai helps applications discover and connect to local AI tools such as Ollama, Codex, Claude Code, and OpenCode.
+switchboard-ai-sdk helps applications discover and connect to local AI tools such as Ollama, Codex, Claude Code, and OpenCode.
 
 Primary use cases:
 
@@ -15,7 +15,7 @@ Primary use cases:
 
 ## Primary Docs
 
-- Repository: https://github.com/MauriceHeinze/switchboard-ai
+- Repository: https://github.com/MauriceHeinze/switchboard-ai-sdk
 - Overview and getting started: README.md
 - API reference: docs/API-REFERENCE.md
 - Examples: examples/README.md
