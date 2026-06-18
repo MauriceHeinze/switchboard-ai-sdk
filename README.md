@@ -99,6 +99,8 @@ console.log(result.message.content);
 
 ## Provider Config
 
+Call `configure()` before `connect()` or before starting the HTTP server when you want global defaults for the current process. In most apps, you call it once during startup and reuse that config until you need to change it.
+
 You can set provider-specific values once instead of passing them on every call:
 
 ```ts
@@ -118,9 +120,9 @@ const tools = await discover();
 const tool = await connect("codex");
 ```
 
-All subsequent SDK and server calls use that config until you call `configure()` again.
+All subsequent SDK and server calls in the current process use that config until you call `configure()` again.
 
-See [docs/SDK-USAGE.md](docs/SDK-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
+If you are using the direct SDK, catch errors like `ToolUnavailableError` and `TimeoutError` around `connect()` and `tool.chat()`. See [docs/SDK-USAGE.md](docs/SDK-USAGE.md) for capability-based selection, model selection, typed error handling, health checks, and an Electron main-process example.
 
 ## Supported Providers
 
@@ -156,25 +158,11 @@ Current behavior:
 - Codex and Claude Code return configured models when one is explicitly set.
 - OpenCode can expose its available models through the CLI, and you can also set `SWITCHBOARD_OPENCODE_MODEL` directly.
 
-For OpenCode, a practical way to think about the available models is by access tier:
-
-| Free | Hosted `opencode-go` | OpenAI-backed |
-| --- | --- | --- |
-| `opencode/big-pickle` | `opencode-go/deepseek-v4-flash` | `openai/gpt-5.3-codex-spark` |
-| `opencode/deepseek-v4-flash-free` | `opencode-go/deepseek-v4-pro` | `openai/gpt-5.4` |
-| `opencode/mimo-v2.5-free` | `opencode-go/glm-5.1` | `openai/gpt-5.4-fast` |
-| `opencode/nemotron-3-ultra-free` | `opencode-go/glm-5.2` | `openai/gpt-5.4-mini` |
-| `opencode/north-mini-code-free` | `opencode-go/kimi-k2.6` | `openai/gpt-5.4-mini-fast` |
-| | `opencode-go/kimi-k2.7-code` | `openai/gpt-5.5` |
-| | `opencode-go/mimo-v2.5` | `openai/gpt-5.5-fast` |
-| | `opencode-go/mimo-v2.5-pro` | `openai/gpt-5.5-pro` |
-| | `opencode-go/minimax-m2.7` | |
-| | `opencode-go/minimax-m3` | |
-| | `opencode-go/qwen3.6-plus` | |
-| | `opencode-go/qwen3.7-max` | |
-| | `opencode-go/qwen3.7-plus` | |
+OpenCode's model lineup changes frequently, so this README does not try to mirror it. Check the official OpenCode model docs for the current provider and model format: <https://opencode.ai/docs/models/>.
 
 ## Run the Local HTTP Server
+
+Use the HTTP server when the caller is not a Node.js process, or when you want a process or network boundary instead of calling the SDK directly in-process.
 
 You can expose discovery and chat over HTTP:
 
@@ -199,6 +187,26 @@ Endpoints:
 ```bash
 curl http://127.0.0.1:3000/discover
 ```
+
+Example response:
+
+```json
+{
+  "tools": [
+    {
+      "name": "Codex",
+      "available": true
+    },
+    {
+      "name": "Ollama",
+      "available": true,
+      "models": ["qwen3:14b"]
+    }
+  ]
+}
+```
+
+This endpoint is intentionally slimmer than the SDK's `discover()` output. If you are already in Node.js or Electron, prefer the direct SDK and catch typed exceptions there. Use the server when HTTP responses and JSON error payloads are a better fit for the caller.
 
 ## Environment Variables
 
@@ -226,10 +234,6 @@ Other valid examples:
 SWITCHBOARD_OPENCODE_MODEL=opencode-go/kimi-k2.7-code
 SWITCHBOARD_OPENCODE_MODEL=openai/gpt-5.5
 ```
-
-## Why This Project Is Different
-
-Many AI SDKs assume one hosted provider and a metered API bill. `switchboard-ai-sdk` is focused on local-first AI tooling on developer machines, so teams can reuse installed tools and keep a familiar provider-style integration without depending on paid remote inference for every request.
 
 ## License
 
