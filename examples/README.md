@@ -11,13 +11,14 @@ Example integrations live here. They all follow the same core flow:
 3. send a prompt
 4. read `response.message.content`
 
-## Codex service-function example
+## Codex direct-tool example
 
-`codex-functions.js` shows the small direct implementation for the exported service helpers that map to:
+`codex-functions.js` shows the small direct SDK flow:
 
-- `auth` -> `startToolAuth("codex")`
-- `health` -> `checkToolHealth("codex")`
-- `prompt` -> `chatWithTool("codex", input)`
+- `connect("codex")`
+- `tool.checkAuth()` and `tool.startAuth()`
+- `tool.health()`
+- `tool.chat()`
 
 Run it after building the package:
 

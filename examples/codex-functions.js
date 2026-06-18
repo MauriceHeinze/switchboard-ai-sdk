@@ -1,32 +1,35 @@
-import {
-  chatWithTool,
-  checkToolHealth,
-  startToolAuth
-} from "../dist/index.js";
-
-const toolId = "codex";
+import { connect } from "../dist/index.js";
 
 async function main() {
-  const health = await checkToolHealth(toolId, { timeoutMs: 10_000 });
-  console.log("health:", health);
+  const tool = await connect("codex");
+  const auth = await tool.checkAuth?.({ timeoutMs: 10_000 });
 
-  if (health.authSupported && health.authenticated === false) {
-    const auth = await startToolAuth(toolId, { timeoutMs: 10_000 });
-    console.log("auth:", auth);
+  console.log("auth:", auth);
 
-    if (auth.status !== "already_authenticated" && auth.status !== "started") {
-      throw new Error(auth.message ?? "Codex authentication could not be started.");
+  if (auth?.authSupported && auth.authenticated === false) {
+    const started = await tool.startAuth?.({ timeoutMs: 10_000 });
+    console.log("startAuth:", started);
+
+    if (
+      started?.status !== "already_authenticated" &&
+      started?.status !== "started"
+    ) {
+      throw new Error(
+        started?.message ?? "Codex authentication could not be started."
+      );
     }
 
     return;
   }
 
-  if (!health.available) {
-    throw new Error(health.reason ?? "Codex is not available.");
+  const health = await tool.health({ timeoutMs: 10_000 });
+  console.log("health:", health);
+
+  if (!health) {
+    throw new Error("Codex is not healthy.");
   }
 
-  const prompt = await chatWithTool(
-    toolId,
+  const prompt = await tool.chat(
     {
       messages: [
         {
@@ -40,7 +43,7 @@ async function main() {
     }
   );
 
-  console.log("prompt:", prompt.result.message.content);
+  console.log("prompt:", prompt.message.content);
 }
 
 main().catch((error) => {
