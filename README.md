@@ -23,6 +23,10 @@ If you use OpenCode and do not have, or do not want to provide, a paid AI subscr
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
+When a tool requires a local CLI login, the SDK can surface that auth flow through the local server so app developers can show a clear handoff instead of a vague failure state:
+
+![Authentication screen example](docs/images/auth-screen.png)
+
 ## Install
 
 ```bash
