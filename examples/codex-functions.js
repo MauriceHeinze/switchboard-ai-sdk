@@ -5,13 +5,13 @@ async function main() {
   const tool = await connect("codex");
 
   // Check whether Codex is ready to accept requests before sending a prompt.
-  const auth = await tool.checkAuth?.({ timeoutMs: 10_000 });
+  const auth = await tool.checkAuth?.({ timeoutMs: 10_000 }); // Timeout is optional
 
   console.log("auth:", auth);
 
   if (auth?.authSupported && auth.authenticated === false) {
     // Start the interactive login flow if this machine is not authenticated yet.
-    const started = await tool.startAuth?.({ timeoutMs: 10_000 });
+    const started = await tool.startAuth?.({ timeoutMs: 10_000 }); // Timeout is optional
     console.log("startAuth:", started);
 
     if (
@@ -27,7 +27,7 @@ async function main() {
   }
 
   // Run a lightweight health check so the example fails early on broken setups.
-  const health = await tool.health({ timeoutMs: 10_000 });
+  const health = await tool.health({ timeoutMs: 10_000 }); // Timeout is optional
   console.log("health:", health);
 
   if (!health) {
@@ -45,7 +45,7 @@ async function main() {
       ]
     },
     {
-      timeoutMs: 30_000
+      timeoutMs: 30_000 // Optional
     }
   );
 
