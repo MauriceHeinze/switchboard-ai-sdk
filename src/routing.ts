@@ -159,7 +159,7 @@ async function runSingleAttempt(
   };
 }
 
-export function rankProviders(preferred: ProviderId[]): ProviderId[] {
+function normalizeProviders(preferred: ProviderId[]): ProviderId[] {
   const seen = new Set<ProviderId>();
   const ranked: ProviderId[] = [];
 
@@ -173,11 +173,11 @@ export function rankProviders(preferred: ProviderId[]): ProviderId[] {
   return ranked;
 }
 
-export async function chatWithFallback(
+export async function chat(
   input: ChatInput,
   options: RoutedChatOptions
 ): Promise<RoutedChatResponse> {
-  const providers = rankProviders(options.providers);
+  const providers = normalizeProviders(options.providers);
   const retries = normalizeRetries(options.retries);
   const attempts: RoutingAttempt[] = [];
   const tools = await discover();

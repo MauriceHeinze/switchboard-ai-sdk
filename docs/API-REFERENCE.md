@@ -109,21 +109,12 @@ type ConnectedTool = {
 };
 ```
 
-### `rankProviders(preferred)`
+### `chat(input, options)`
 
 ```ts
-import { rankProviders } from "switchboard-ai-sdk";
+import { chat } from "switchboard-ai-sdk";
 
-const providers = rankProviders(["codex", "ollama", "codex"]);
-// ["codex", "ollama"]
-```
-
-### `chatWithFallback(input, options)`
-
-```ts
-import { chatWithFallback } from "switchboard-ai-sdk";
-
-const response = await chatWithFallback(
+const response = await chat(
   {
     messages: [{ role: "user", content: "Reply in one sentence." }]
   },

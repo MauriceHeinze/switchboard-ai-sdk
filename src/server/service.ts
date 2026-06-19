@@ -12,7 +12,7 @@ import {
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
-import { chatWithFallback } from "../routing.js";
+import { chat } from "../routing.js";
 import type {
   ConnectedTool,
   DiscoveredTool,
@@ -353,10 +353,10 @@ export async function chatWithTool(
   );
 }
 
-export async function chatWithFallbackRoute(
+export async function chatRoute(
   input: RoutedChatRequest
 ): Promise<RoutedChatToolResponse> {
-  return chatWithFallback(
+  return chat(
     {
       messages: input.messages,
       model: input.model

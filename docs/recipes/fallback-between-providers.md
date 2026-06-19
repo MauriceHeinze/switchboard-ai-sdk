@@ -10,10 +10,10 @@ og:description: Pick the best available local AI tool at runtime and fall back a
 Pick a preferred provider and fall back if it is unavailable.
 
 ```ts
-import { chatWithFallback } from "switchboard-ai-sdk";
+import { chat } from "switchboard-ai-sdk";
 
 async function ask(prompt: string) {
-  const result = await chatWithFallback(
+  const result = await chat(
     {
       messages: [{ role: "user", content: prompt }]
     },

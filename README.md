@@ -104,12 +104,12 @@ console.log(result.message.content);
 
 ## Retry-Aware Fallback
 
-Use `chatWithFallback()` when you want a static provider order with immediate fallback on unavailable tools and retry-aware failover for execution issues like timeouts.
+Use `chat()` when you want a static provider order with immediate fallback on unavailable tools and retry-aware failover for execution issues like timeouts.
 
 ```ts
-import { chatWithFallback } from "switchboard-ai-sdk";
+import { chat } from "switchboard-ai-sdk";
 
-const response = await chatWithFallback(
+const response = await chat(
   {
     messages: [{ role: "user", content: "Summarize this repo." }]
   },

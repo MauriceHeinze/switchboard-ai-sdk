@@ -1,10 +1,9 @@
 export { connect } from "./connect.js";
 export { configure } from "./config.js";
 export { discover } from "./discovery/discover.js";
-export { executeToolChat } from "./chat.js";
-export { chatWithFallback, rankProviders } from "./routing.js";
+export { chat } from "./routing.js";
 export {
-  chatWithFallbackRoute,
+  chatRoute,
   chatWithTool,
   checkAllToolsHealth,
   checkToolHealth,

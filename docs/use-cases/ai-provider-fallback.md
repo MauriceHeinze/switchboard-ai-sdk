@@ -27,28 +27,20 @@ You either pick one provider and lose users, or write a lot of glue code.
 switchboard-ai-sdk normalizes discovery, health, auth, and chat across all supported providers. You can discover the available tools and pick the best one at runtime.
 
 ```ts
-import { discover, connect } from "switchboard-ai-sdk";
+import { chat } from "switchboard-ai-sdk";
 
-async function chatWithFallback(prompt: string) {
-  const tools = await discover();
-
-  // Prefer Ollama, then OpenCode, then Codex, then Claude Code
-  const preference = ["ollama", "opencode", "codex", "claude-code"];
-
-  const toolId = preference.find((id) =>
-    tools.some((t) => t.id === id && t.available)
+async function ask(prompt: string) {
+  const result = await chat(
+    {
+      messages: [{ role: "user", content: prompt }]
+    },
+    {
+      providers: ["ollama", "opencode", "codex", "claude-code"],
+      retries: 1
+    }
   );
 
-  if (!toolId) {
-    throw new Error("No supported AI tool is installed.");
-  }
-
-  const tool = await connect(toolId);
-  const result = await tool.chat({
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  return result.message.content;
+  return result.result.message.content;
 }
 ```
 

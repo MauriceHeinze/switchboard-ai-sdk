@@ -1,12 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  chat,
   FallbackExhaustedError,
   QuotaExceededError,
-  TimeoutError,
-  ToolAuthError,
-  chatWithFallback,
-  rankProviders
+  TimeoutError
 } from "../dist/index.js";
 import { providerRegistry } from "../dist/providers/index.js";
 
@@ -60,14 +58,7 @@ test.afterEach(() => {
   restoreProviders();
 });
 
-test("rankProviders deduplicates while preserving order", () => {
-  assert.deepEqual(
-    rankProviders(["codex", "ollama", "codex", "opencode"]),
-    ["codex", "ollama", "opencode"]
-  );
-});
-
-test("chatWithFallback immediately skips unavailable providers", async () => {
+test("chat immediately skips unavailable providers", async () => {
   providerRegistry.codex = {
     async discover() {
       return createDiscoveredTool("codex", false);
@@ -94,7 +85,7 @@ test("chatWithFallback immediately skips unavailable providers", async () => {
     }
   };
 
-  const result = await chatWithFallback(
+  const result = await chat(
     {
       messages: [{ role: "user", content: "hello" }]
     },
@@ -111,7 +102,7 @@ test("chatWithFallback immediately skips unavailable providers", async () => {
   ]);
 });
 
-test("chatWithFallback retries timeouts before succeeding on the same provider", async () => {
+test("chat retries timeouts before succeeding on the same provider", async () => {
   let calls = 0;
   providerRegistry.codex = {
     async discover() {
@@ -137,7 +128,7 @@ test("chatWithFallback retries timeouts before succeeding on the same provider",
     }
   };
 
-  const result = await chatWithFallback(
+  const result = await chat(
     {
       messages: [{ role: "user", content: "hello" }]
     },
@@ -158,7 +149,7 @@ test("chatWithFallback retries timeouts before succeeding on the same provider",
   );
 });
 
-test("chatWithFallback falls through after retry exhaustion", async () => {
+test("chat falls through after retry exhaustion", async () => {
   let codexCalls = 0;
 
   providerRegistry.codex = {
@@ -192,7 +183,7 @@ test("chatWithFallback falls through after retry exhaustion", async () => {
     }
   };
 
-  const result = await chatWithFallback(
+  const result = await chat(
     {
       messages: [{ role: "user", content: "hello" }]
     },
@@ -207,7 +198,7 @@ test("chatWithFallback falls through after retry exhaustion", async () => {
   assert.equal(result.fallbackUsed, true);
 });
 
-test("chatWithFallback does not retry unauthenticated providers", async () => {
+test("chat does not retry unauthenticated providers", async () => {
   let codexCalls = 0;
 
   providerRegistry.codex = {
@@ -237,7 +228,7 @@ test("chatWithFallback does not retry unauthenticated providers", async () => {
     }
   };
 
-  const result = await chatWithFallback(
+  const result = await chat(
     {
       messages: [{ role: "user", content: "hello" }]
     },
@@ -253,7 +244,7 @@ test("chatWithFallback does not retry unauthenticated providers", async () => {
   assert.equal(result.attempts[0].stage, "preflight");
 });
 
-test("chatWithFallback throws FallbackExhaustedError with attempt history", async () => {
+test("chat throws FallbackExhaustedError with attempt history", async () => {
   providerRegistry.codex = {
     async discover() {
       return createDiscoveredTool("codex");
@@ -277,7 +268,7 @@ test("chatWithFallback throws FallbackExhaustedError with attempt history", asyn
 
   await assert.rejects(
     () =>
-      chatWithFallback(
+      chat(
         {
           messages: [{ role: "user", content: "hello" }]
         },

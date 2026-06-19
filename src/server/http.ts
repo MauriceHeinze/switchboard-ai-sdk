@@ -5,7 +5,7 @@ import { URL } from "node:url";
 const require = createRequire(import.meta.url);
 const { version: PACKAGE_VERSION } = require("../../package.json");
 import {
-  chatWithFallbackRoute,
+  chatRoute,
   discoverTools,
   checkAllToolsHealth,
   checkToolHealth,
@@ -401,7 +401,7 @@ export function createSwitchboardServer(
           );
         }
 
-        const result = await chatWithFallbackRoute(input);
+        const result = await chatRoute(input);
 
         writeJson(response, 200, result);
         return;
