@@ -233,6 +233,9 @@ Response:
       "version": "0.9.0",
       "capabilities": [
         "agent-task",
+        "code-analysis",
+        "code-edit",
+        "chat",
         "health-check"
       ]
     },
@@ -244,6 +247,9 @@ Response:
       "version": "1.2.3",
       "capabilities": [
         "agent-task",
+        "code-analysis",
+        "code-edit",
+        "chat",
         "health-check"
       ],
       "models": [
@@ -259,6 +265,8 @@ Response:
       "version": "0.8.0",
       "capabilities": [
         "chat",
+        "completion",
+        "model-list",
         "health-check"
       ],
       "models": [
@@ -274,6 +282,9 @@ Response:
       "version": "0.8.0",
       "capabilities": [
         "agent-task",
+        "code-analysis",
+        "code-edit",
+        "chat",
         "health-check"
       ],
       "models": [
@@ -322,7 +333,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "version": "0.1.0",
+  "version": "0.1.8",
   "uptimeMs": 918,
   "tools": [
     {

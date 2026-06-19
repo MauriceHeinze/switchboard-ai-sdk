@@ -250,7 +250,7 @@ Example response:
       "type": "agent",
       "available": true,
       "version": "1.2.3",
-      "capabilities": ["agent-task", "health-check"],
+      "capabilities": ["agent-task", "code-analysis", "code-edit", "chat", "health-check"],
       "models": ["gpt-5-codex"],
       "defaultModel": "gpt-5-codex"
     },
@@ -260,7 +260,7 @@ Example response:
       "type": "runtime",
       "available": true,
       "version": "0.8.0",
-      "capabilities": ["chat", "health-check"],
+      "capabilities": ["chat", "completion", "model-list", "health-check"],
       "models": ["qwen3:14b"],
       "defaultModel": "qwen3:14b"
     }

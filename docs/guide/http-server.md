@@ -98,7 +98,7 @@ curl http://127.0.0.1:3000/discover
       "type": "agent",
       "available": true,
       "version": "1.2.3",
-      "capabilities": ["agent-task", "health-check"],
+      "capabilities": ["agent-task", "code-analysis", "code-edit", "chat", "health-check"],
       "models": ["gpt-5-codex"],
       "defaultModel": "gpt-5-codex"
     },
@@ -108,7 +108,7 @@ curl http://127.0.0.1:3000/discover
       "type": "runtime",
       "available": true,
       "version": "0.8.0",
-      "capabilities": ["chat", "health-check"],
+      "capabilities": ["chat", "completion", "model-list", "health-check"],
       "models": ["qwen3:14b"],
       "defaultModel": "qwen3:14b"
     }
@@ -127,7 +127,7 @@ curl http://127.0.0.1:3000/health
 ```json
 {
   "status": "ok",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "uptimeMs": 918,
   "tools": [
     {

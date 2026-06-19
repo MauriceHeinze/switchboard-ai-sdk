@@ -37,7 +37,7 @@ export default defineConfig({
         operatingSystem: "Linux, macOS, Windows",
         description:
           "switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.",
-        version: "0.1.7",
+        version: "0.1.8",
         url: "https://mauriceheinze.github.io/switchboard-ai-sdk/",
         license: "https://opensource.org/licenses/MIT",
         offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
