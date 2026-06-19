@@ -5,8 +5,9 @@ const HOSTNAME = "https://mauriceheinze.github.io";
 
 export default defineConfig({
   title: "switchboard-ai-sdk",
+  titleTemplate: ":title — switchboard-ai-sdk",
   description:
-    "TypeScript SDK for connecting local applications to AI tools — Codex, Claude Code, OpenCode, and Ollama — through one API. Local-first, zero API costs.",
+    "switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.",
   base: BASE,
   lang: "en-US",
   cleanUrls: true,
@@ -28,14 +29,14 @@ export default defineConfig({
     head.push(["link", { rel: "canonical", href: canonicalUrl }]);
 
     if (pageData.relativePath === "index.md") {
-      const jsonLd = JSON.stringify({
+      const softwareApplication = JSON.stringify({
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
         name: "switchboard-ai-sdk",
         applicationCategory: "DeveloperApplication",
         operatingSystem: "Linux, macOS, Windows",
         description:
-          "TypeScript SDK for connecting local applications to AI tools like Codex, Claude Code, OpenCode, and Ollama through one API. Discover, connect, and chat — no hosted API costs.",
+          "switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.",
         version: "0.1.7",
         url: "https://mauriceheinze.github.io/switchboard-ai-sdk/",
         license: "https://opensource.org/licenses/MIT",
@@ -44,7 +45,21 @@ export default defineConfig({
         codeRepository: "https://github.com/MauriceHeinze/switchboard-ai-sdk",
         programmingLanguage: "TypeScript",
       });
-      head.push(["script", { type: "application/ld+json" }, jsonLd]);
+
+      const softwareSourceCode = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        name: "switchboard-ai-sdk",
+        programmingLanguage: "TypeScript",
+        runtimePlatform: "Node.js, Electron",
+        codeRepository: "https://github.com/MauriceHeinze/switchboard-ai-sdk",
+        license: "https://opensource.org/license/mit",
+        description:
+          "TypeScript SDK for discovering and using local AI tools such as Codex, Claude Code, OpenCode, and Ollama through one consistent API.",
+      });
+
+      head.push(["script", { type: "application/ld+json" }, softwareApplication]);
+      head.push(["script", { type: "application/ld+json" }, softwareSourceCode]);
     }
 
     return head;
@@ -55,14 +70,49 @@ export default defineConfig({
 
     nav: [
       { text: "Guide", link: "/guide/getting-started" },
+      {
+        text: "Providers",
+        items: [
+          { text: "Overview", link: "/guide/providers" },
+          { text: "Codex", link: "/providers/codex" },
+          { text: "Claude Code", link: "/providers/claude-code" },
+          { text: "OpenCode", link: "/providers/opencode" },
+          { text: "Ollama", link: "/providers/ollama" },
+        ],
+      },
+      {
+        text: "Use Cases",
+        items: [
+          { text: "Electron AI apps", link: "/use-cases/electron-ai-apps" },
+          { text: "Local-first AI apps", link: "/use-cases/local-first-ai-apps" },
+          { text: "No API cost AI features", link: "/use-cases/no-api-cost-ai-features" },
+          { text: "AI provider fallback", link: "/use-cases/ai-provider-fallback" },
+          { text: "All four providers", link: "/use-cases/codex-claude-opencode-ollama" },
+        ],
+      },
+      {
+        text: "Recipes",
+        items: [
+          { text: "Discover first available provider", link: "/recipes/discover-first-available-provider" },
+          { text: "Connect to Ollama", link: "/recipes/connect-to-ollama" },
+          { text: "Use OpenCode free model", link: "/recipes/use-opencode-free-model" },
+          { text: "Check auth before chat", link: "/recipes/check-auth-before-chat" },
+          { text: "Start HTTP server", link: "/recipes/start-http-server" },
+          { text: "Electron main process", link: "/recipes/electron-main-process" },
+          { text: "Fallback between providers", link: "/recipes/fallback-between-providers" },
+        ],
+      },
       { text: "API Reference", link: "/api/reference" },
       { text: "Examples", link: "/examples" },
-      { text: "Changelog", link: "/changelog" },
       {
-        text: "v0.1.7",
+        text: "More",
         items: [
-          { text: "npm", link: "https://www.npmjs.com/package/switchboard-ai-sdk" },
-          { text: "GitHub", link: "https://github.com/MauriceHeinze/switchboard-ai-sdk" },
+          { text: "Compare", link: "/compare" },
+          { text: "FAQ", link: "/faq" },
+          { text: "Troubleshooting", link: "/troubleshooting" },
+          { text: "Security & Privacy", link: "/security-and-privacy" },
+          { text: "For AI Agents", link: "/for-ai-agents" },
+          { text: "Changelog", link: "/changelog" },
         ],
       },
     ],
@@ -81,6 +131,44 @@ export default defineConfig({
           ],
         },
       ],
+      "/providers/": [
+        {
+          text: "Providers",
+          items: [
+            { text: "Overview", link: "/guide/providers" },
+            { text: "Codex", link: "/providers/codex" },
+            { text: "Claude Code", link: "/providers/claude-code" },
+            { text: "OpenCode", link: "/providers/opencode" },
+            { text: "Ollama", link: "/providers/ollama" },
+          ],
+        },
+      ],
+      "/use-cases/": [
+        {
+          text: "Use Cases",
+          items: [
+            { text: "Electron AI apps", link: "/use-cases/electron-ai-apps" },
+            { text: "Local-first AI apps", link: "/use-cases/local-first-ai-apps" },
+            { text: "No API cost AI features", link: "/use-cases/no-api-cost-ai-features" },
+            { text: "AI provider fallback", link: "/use-cases/ai-provider-fallback" },
+            { text: "All four providers", link: "/use-cases/codex-claude-opencode-ollama" },
+          ],
+        },
+      ],
+      "/recipes/": [
+        {
+          text: "Recipes",
+          items: [
+            { text: "Discover first available provider", link: "/recipes/discover-first-available-provider" },
+            { text: "Connect to Ollama", link: "/recipes/connect-to-ollama" },
+            { text: "Use OpenCode free model", link: "/recipes/use-opencode-free-model" },
+            { text: "Check auth before chat", link: "/recipes/check-auth-before-chat" },
+            { text: "Start HTTP server", link: "/recipes/start-http-server" },
+            { text: "Electron main process", link: "/recipes/electron-main-process" },
+            { text: "Fallback between providers", link: "/recipes/fallback-between-providers" },
+          ],
+        },
+      ],
       "/api/": [
         {
           text: "API Reference",
@@ -96,7 +184,7 @@ export default defineConfig({
     ],
 
     footer: {
-      message: "Released under the MIT License.",
+      message: "Released under the MIT License. · <a href=\"/switchboard-ai-sdk/llms.txt\">llms.txt</a>",
       copyright: `Copyright © ${new Date().getFullYear()} Maurice Heinze`,
     },
 
