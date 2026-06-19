@@ -14,8 +14,9 @@ import { VPButton } from "vitepress/theme";
         Connect your app to local AI tools through <strong>one SDK</strong>.
       </p>
       <p class="hero-description">
-        TypeScript SDK for discovering and using Codex, Claude Code, OpenCode, and Ollama
-        from Node.js or Electron. No hosted API costs, no provider-specific glue code.
+        TypeScript SDK for Node.js and Electron apps that lets developers discover and use
+        local AI tools already installed on a user's machine, including Codex, Claude Code,
+        OpenCode, and Ollama, through one consistent API.
       </p>
       <div class="hero-actions">
         <VPButton

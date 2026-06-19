@@ -1,6 +1,6 @@
 ---
 title: switchboard-ai-sdk
-description: Connect your app to local AI tools through one SDK. Supports Codex, Claude Code, OpenCode, and Ollama. Zero API costs, TypeScript-first.
+description: switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 og:title: switchboard-ai-sdk — Local AI SDK for TypeScript
 og:description: Connect your Node.js or Electron app to Codex, Claude Code, OpenCode, and Ollama through one unified SDK. Discover, connect, chat — no hosted API costs.
 ---
@@ -12,7 +12,7 @@ import HomeHero from ".vitepress/theme/Hero.vue";
 
 ## What is switchboard-ai-sdk?
 
-`switchboard-ai-sdk` is an open-source TypeScript SDK that lets Node.js and Electron apps discover and use AI tools already installed on the local machine — through **one consistent API**.
+`switchboard-ai-sdk` is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through **one consistent API**.
 
 It normalizes the differences between local AI providers so you can:
 
@@ -115,3 +115,6 @@ const server = await startSwitchboardServer({ port: 3000 });
 - **[Connect & Chat](/guide/connect-chat)** — The `ConnectedTool` interface in depth
 - **[HTTP Server](/guide/http-server)** — All endpoints with request/response examples
 - **[API Reference](/api/reference)** — Complete TypeScript API documentation
+- **[Compare](/compare)** — How switchboard-ai-sdk compares to alternatives
+- **[For AI Agents](/for-ai-agents)** — Quick integration guide for coding agents
+- **[llms.txt](/llms.txt)** — Machine-readable project overview
