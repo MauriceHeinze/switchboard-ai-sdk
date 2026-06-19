@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "homepage": "https://github.com/MauriceHeinze/switchboard-ai-sdk#readme",
+  "homepage": "https://mauriceheinze.github.io/switchboard-ai-sdk/",
+  "documentation": "https://mauriceheinze.github.io/switchboard-ai-sdk/",
   "bugs": {
     "url": "https://github.com/MauriceHeinze/switchboard-ai-sdk/issues"
   },
@@ -21,7 +22,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "npm run build && node --test tests/**/*.test.js",
     "validate": "npm run build && node ./scripts/validate.js",
-    "validate:providers": "npm run build && node ./scripts/validate-providers.js"
+    "validate:providers": "npm run build && node ./scripts/validate-providers.js",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "keywords": [
     "ai",
@@ -45,6 +49,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vitepress": "^1.6.4"
   }
 }

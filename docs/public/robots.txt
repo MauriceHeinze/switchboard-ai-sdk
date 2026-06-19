@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://mauriceheinze.github.io/switchboard-ai-sdk/sitemap.xml

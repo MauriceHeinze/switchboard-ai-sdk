@@ -32,6 +32,10 @@ coverage/
 .next/
 .turbo/
 
+# VitePress
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
 # Python
 __pycache__/
 *.py[cod]
