@@ -2,18 +2,29 @@
 
 ## Overview
 
-switchboard-ai-sdk is an open-source TypeScript SDK that lets Node.js and Electron apps discover and use AI tools already installed on the local machine through one consistent API. It normalizes the differences between Codex, Claude Code, Ollama, and OpenCode so developers can write one integration instead of four.
+switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 
-The SDK supports two integration paths:
-1. **Direct SDK** — In-process usage for Node.js and Electron
-2. **HTTP Bridge** — Local HTTP server for non-Node.js callers
+Use switchboard-ai-sdk when:
 
-Core design principles:
-- Direct SDK first, HTTP bridge second
-- Provider identity and capabilities remain explicit
-- Auth, availability, and timeout failures are easy to diagnose
-- Typed errors instead of opaque HTTP 500s
-- Agent vs runtime tools are clearly distinguished
+- building Electron apps with local AI features
+- building Node.js apps that should use user-installed AI tools
+- integrating Codex, Claude Code, OpenCode, or Ollama behind one API
+- avoiding provider-specific glue code
+- checking provider availability and authentication before sending prompts
+
+Do not use switchboard-ai-sdk when:
+
+- you need a hosted cloud API
+- you need browser-only AI without a local bridge
+- you need guaranteed identical output across providers
+
+## Package
+
+- npm package: `switchboard-ai-sdk`
+- GitHub repository: https://github.com/MauriceHeinze/switchboard-ai-sdk
+- Language: TypeScript
+- Runtime: Node.js, Electron
+- License: MIT
 
 ## Installation
 
@@ -21,25 +32,19 @@ Core design principles:
 npm install switchboard-ai-sdk
 ```
 
-Requires Node.js 18+ and at least one local AI tool installed (Codex, Claude Code, Ollama, or OpenCode).
+Requires Node.js 18+ and at least one supported local AI tool.
 
-## Quick Start
+## Core docs
 
-```ts
-import { connect, discover } from "switchboard-ai-sdk";
-
-const tools = await discover();
-const toolId = tools.find((tool) => tool.available)?.id;
-
-const tool = await connect(toolId);
-const response = await tool.chat({
-  messages: [
-    { role: "user", content: "Generate me a list of five healthy lunch ideas." }
-  ]
-});
-
-console.log(response?.message.content);
-```
+- Overview: https://mauriceheinze.github.io/switchboard-ai-sdk/
+- Getting Started: https://mauriceheinze.github.io/switchboard-ai-sdk/guide/getting-started
+- API Reference: https://mauriceheinze.github.io/switchboard-ai-sdk/api/reference
+- Examples: https://mauriceheinze.github.io/switchboard-ai-sdk/examples
+- Compare: https://mauriceheinze.github.io/switchboard-ai-sdk/compare
+- FAQ: https://mauriceheinze.github.io/switchboard-ai-sdk/faq
+- Troubleshooting: https://mauriceheinze.github.io/switchboard-ai-sdk/troubleshooting
+- Security & Privacy: https://mauriceheinze.github.io/switchboard-ai-sdk/security-and-privacy
+- For AI Agents: https://mauriceheinze.github.io/switchboard-ai-sdk/for-ai-agents
 
 ## Public API
 
@@ -81,6 +86,7 @@ const tools = await discover();
 ```
 
 Returns an array of DiscoveredTool:
+
 ```ts
 type DiscoveredTool = {
   id: "claude-code" | "codex" | "ollama" | "opencode";
@@ -106,6 +112,7 @@ const tool = await connect("ollama");
 ```
 
 Returns a ConnectedTool:
+
 ```ts
 type ConnectedTool = {
   id: "claude-code" | "codex" | "ollama" | "opencode";
@@ -139,6 +146,7 @@ const response = await tool.chat({
 ```
 
 ChatInput:
+
 ```ts
 type ChatInput = {
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
@@ -147,61 +155,12 @@ type ChatInput = {
 ```
 
 ToolResult:
+
 ```ts
 type ToolResult = {
   message: { role: "assistant"; content: string };
   usage?: Record<string, number>;
   metadata?: Record<string, unknown>;
-};
-```
-
-### tool.health(options?)
-
-Checks whether the provider is healthy and ready.
-
-```ts
-const healthy = await tool.health();
-```
-
-Returns `boolean`.
-
-### tool.checkAuth(options?)
-
-Inspects the current auth state of the provider.
-
-```ts
-const auth = await tool.checkAuth();
-```
-
-Returns:
-```ts
-type AuthCheckResult = {
-  authSupported: boolean;
-  authenticated: boolean | null;
-  authStatus: "authenticated" | "unauthenticated" | "not_supported" | "unknown";
-  reason?: string;
-  command?: string;
-  output?: string;
-};
-```
-
-### tool.startAuth(options?)
-
-Starts the authentication flow for the provider.
-
-```ts
-const result = await tool.startAuth();
-```
-
-Returns:
-```ts
-type AuthStartResult = {
-  status: "already_authenticated" | "started" | "unsupported" | "failed";
-  authenticated: boolean | null;
-  command: string;
-  message?: string;
-  instructions?: string;
-  output?: string;
 };
 ```
 
@@ -247,6 +206,8 @@ Sandbox modes:
 - `workspace-write` — Read/write within workspace
 - `danger-full-access` — Full filesystem access
 
+Auth flow: `tool.checkAuth()` then `tool.startAuth()` if unauthenticated.
+
 ### Claude Code (agent type)
 
 Anthropic's CLI-based coding agent. Supports chat, health checks, auth checks, and auth start. Configure with `claudeCodeModel` and `claudeCodeMaxTurns`.
@@ -259,7 +220,7 @@ Ollama is the only runtime-type provider — it serves models but does not auton
 
 ### OpenCode (agent type)
 
-CLI-based coding tool with both free and paid hosted models. Supports chat, health checks, auth checks, auth start, and full model listing. Configure with `opencodeModel`.
+CLI-based coding tool with free and paid hosted models. Supports chat, health checks, auth checks, auth start, and full model listing. Configure with `opencodeModel`.
 
 Free models (no subscription):
 - opencode/big-pickle
@@ -283,7 +244,7 @@ OpenCode Go models (paid):
 - opencode-go/qwen3.7-max
 - opencode-go/qwen3.7-plus
 
-OpenAI-backed models (bring your own key):
+OpenAI-backed models (BYOK):
 - openai/gpt-5.3-codex-spark
 - openai/gpt-5.4
 - openai/gpt-5.4-fast
@@ -356,6 +317,43 @@ HTTP status → error code mapping:
 
 These serve as base defaults — `configure()` values take precedence.
 
+## Comparison with Alternatives
+
+switchboard-ai-sdk vs common alternatives:
+
+- **LangChain / LangChain.js** — orchestration framework for chains, agents, RAG. switchboard-ai-sdk is a local tool bridge, not an orchestration layer.
+- **Vercel AI SDK** — app/UI/cloud-provider SDK for React/Next.js. switchboard-ai-sdk targets Node.js/Electron and local tools.
+- **Ollama JavaScript SDK** — Ollama-only client. switchboard-ai-sdk supports Ollama plus Codex, Claude Code, and OpenCode.
+- **Model Context Protocol (MCP)** — protocol for exposing tools/context to AI hosts. switchboard-ai-sdk is a TypeScript library for calling local AI tools.
+- **LiteLLM** — proxy for 100+ cloud/local models. switchboard-ai-sdk is an in-process SDK, not a proxy.
+- **OpenAI Node SDK / Anthropic TypeScript SDK** — official clients for hosted APIs. switchboard-ai-sdk focuses on local tools.
+- **OpenRouter** — hosted API aggregator. switchboard-ai-sdk avoids hosted API costs by using local tools.
+- **LlamaIndex** — data framework for RAG. switchboard-ai-sdk is a provider bridge.
+- **Direct CLI calls** — maximum control, zero dependencies. switchboard-ai-sdk gives you normalized APIs, typed errors, and discovery.
+
+## Use Cases
+
+- **Electron AI apps** — Add local AI features to Electron via main-process SDK and renderer HTTP bridge.
+- **Local-first AI apps** — Keep data on-device using Ollama and local CLI tools.
+- **No API cost AI features** — Let users bring their own installed tools instead of paying per request.
+- **AI provider fallback** — Automatically pick the best available provider at runtime.
+- **All four providers** — Support Codex, Claude Code, OpenCode, and Ollama with one integration.
+
+## Security and Privacy
+
+- The SDK itself does not send data to remote servers.
+- Agent tools may read or write files; choose the most restrictive sandbox mode.
+- Ollama runs locally by default; Codex, Claude Code, and OpenCode may call cloud models depending on configuration.
+- In Electron, run the SDK in the main process and expose only the HTTP bridge URL through a preload script.
+- Bind the HTTP bridge to localhost only and never expose it to the network.
+
+## FAQ
+
+- **Can I use switchboard-ai-sdk in the browser?** No, not directly. Use the HTTP bridge or an Electron main-process integration.
+- **Does it remove API costs?** It removes hosted API costs for the app developer when users run their own local tools. Users may still need accounts or local models.
+- **Is it an SDK?** Yes — TypeScript API for discovery, connection, chat, health, auth, config, and optional HTTP server.
+- **Is it a LangChain alternative?** Not directly. It is lower-level and focused on accessing local AI tools through one interface.
+
 ## Complete Usage Example
 
 ```ts
@@ -376,7 +374,7 @@ async function askAI(prompt: string) {
     const auth = await tool.checkAuth();
     if (auth.authStatus === "unauthenticated") {
       const start = await tool.startAuth();
-      console.log(`Run: ${start.command}`);
+      console.log("Run:", start.command);
       return null;
     }
   }
@@ -411,3 +409,4 @@ MIT. See https://github.com/MauriceHeinze/switchboard-ai-sdk/blob/main/LICENSE
 - Docs site: https://mauriceheinze.github.io/switchboard-ai-sdk/
 - GitHub: https://github.com/MauriceHeinze/switchboard-ai-sdk
 - npm: https://www.npmjs.com/package/switchboard-ai-sdk
+- llms.txt: https://mauriceheinze.github.io/switchboard-ai-sdk/llms.txt

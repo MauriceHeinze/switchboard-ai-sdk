@@ -1,53 +1,50 @@
 # switchboard-ai-sdk
 
-> TypeScript SDK for connecting local applications to AI tools — Codex, Claude Code, OpenCode, and Ollama — through one API.
+> TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 
-## Summary
+switchboard-ai-sdk is useful when an app wants AI features without paying hosted LLM API costs directly. It provides discovery, connection, chat, health checks, auth checks, typed errors, and an optional local HTTP bridge.
 
-switchboard-ai-sdk helps Node.js and Electron apps discover and connect to local AI tools such as Codex, Claude Code, Ollama, and OpenCode through a single, consistent interface. It normalizes discovery, auth, model selection, chat requests, and health checks across providers so apps don't need provider-specific glue code.
+Use switchboard-ai-sdk when:
 
-Primary use cases:
+- building Electron apps with local AI features
+- building Node.js apps that should use user-installed AI tools
+- integrating Codex, Claude Code, OpenCode, or Ollama behind one API
+- avoiding provider-specific glue code
+- checking provider availability and authentication before sending prompts
 
-- local LLM integration for Electron and desktop apps
-- unified TypeScript API for multiple local AI providers
-- agent-tool discovery on developer machines
-- local HTTP bridge for AI tooling
-- replacing paid hosted APIs with locally installed AI tools
+Do not use switchboard-ai-sdk when:
 
-## Primary Docs
+- you need a hosted cloud API
+- you need browser-only AI without a local bridge
+- you need guaranteed identical output across providers
 
-- Docs site: https://mauriceheinze.github.io/switchboard-ai-sdk/
-- Repository: https://github.com/MauriceHeinze/switchboard-ai-sdk
-- npm: https://www.npmjs.com/package/switchboard-ai-sdk
-- Getting started: https://mauriceheinze.github.io/switchboard-ai-sdk/guide/getting-started
-- API reference: https://mauriceheinze.github.io/switchboard-ai-sdk/api/reference
-- Full docs (llms-full.txt): https://mauriceheinze.github.io/switchboard-ai-sdk/llms-full.txt
+## Core docs
 
-## Key Terms
+- [Overview](https://mauriceheinze.github.io/switchboard-ai-sdk/)
+- [Getting Started](https://mauriceheinze.github.io/switchboard-ai-sdk/guide/getting-started)
+- [API Reference](https://mauriceheinze.github.io/switchboard-ai-sdk/api/reference)
+- [Examples](https://mauriceheinze.github.io/switchboard-ai-sdk/examples)
+- [Full docs](https://mauriceheinze.github.io/switchboard-ai-sdk/llms-full.txt)
 
-- local AI SDK
-- TypeScript AI SDK
-- Electron AI integration
-- Ollama integration
-- Codex integration
-- Claude Code integration
-- OpenCode integration
-- local LLM discovery
-- desktop app AI
-- local-first AI
+## Package
 
-## Public API
+- npm package: `switchboard-ai-sdk`
+- GitHub repository: https://github.com/MauriceHeinze/switchboard-ai-sdk
+- Language: TypeScript
+- Runtime: Node.js, Electron
+- License: MIT
 
-- `configure(config)`: set provider-level defaults
-- `discover()`: list available providers, models, and capabilities
-- `connect(providerId)`: connect to a specific AI tool
-- Connected tool methods: `chat()`, `health()`, `checkAuth()`, `startAuth()`
-- `startSwitchboardServer(options)`: expose the API over a local HTTP server
-- `createSwitchboardServer(options)`: create a server without starting it
+## Main API
 
-## Supported Providers
+- `configure(config)` — set process-level provider defaults
+- `discover()` — list available providers, models, and capabilities
+- `connect(providerId)` — connect to a specific AI tool
+- `startSwitchboardServer(options)` — start the optional local HTTP bridge
+- `createSwitchboardServer(options)` — create the HTTP bridge without starting it
 
-- Codex (agent)
-- Claude Code (agent)
-- Ollama (runtime)
-- OpenCode (agent)
+## Supported providers
+
+- Codex
+- Claude Code
+- OpenCode
+- Ollama
