@@ -1,5 +1,9 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import { createRequire } from "node:module";
 import { URL } from "node:url";
+
+const require = createRequire(import.meta.url);
+const { version: PACKAGE_VERSION } = require("../../package.json");
 import {
   discoverTools,
   checkAllToolsHealth,
@@ -219,7 +223,7 @@ export function createSwitchboardServer(
 
         writeJson(response, 200, {
           status: "ok",
-          version: "0.1.0",
+          version: PACKAGE_VERSION,
           uptimeMs: Date.now() - startedAt,
           tools
         } satisfies AggregateHealthResponse);
