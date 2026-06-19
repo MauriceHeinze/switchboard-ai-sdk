@@ -4,6 +4,8 @@
 
 switchboard-ai-sdk is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 
+It exposes not just provider discovery and chat, but also health state, auth state, and provider usage-limit windows when those limits are available from the user's local tool state.
+
 Use switchboard-ai-sdk when:
 
 - building Electron apps with local AI features
@@ -11,6 +13,7 @@ Use switchboard-ai-sdk when:
 - integrating Codex, Claude Code, OpenCode, or Ollama behind one API
 - avoiding provider-specific glue code
 - checking provider availability and authentication before sending prompts
+- reading user usage-limit windows when the provider exposes them locally
 
 Do not use switchboard-ai-sdk when:
 
@@ -178,8 +181,8 @@ console.log(server.url); // http://127.0.0.1:3000
 HTTP Endpoints:
 - GET /config — Read current provider config
 - PUT /config — Replace provider config
-- GET /health — Aggregate health status of all tools
-- GET /health/:toolId — Health status of a specific tool
+- GET /health — Aggregate health status, auth state, and usage-limit visibility for all tools
+- GET /health/:toolId — Health status, auth state, and usage-limit visibility for a specific tool
 - GET /discover — Discover available AI tools
 - POST /auth/:toolId — Start authentication for a provider
 - POST /chat/:toolId — Send a chat prompt to a provider

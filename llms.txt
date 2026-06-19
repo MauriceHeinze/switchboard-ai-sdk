@@ -2,7 +2,7 @@
 
 > TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 
-switchboard-ai-sdk is useful when an app wants AI features without paying hosted LLM API costs directly. It provides discovery, connection, chat, health checks, auth checks, typed errors, and an optional local HTTP bridge.
+switchboard-ai-sdk is useful when an app wants AI features without paying hosted LLM API costs directly. It provides discovery, connection, chat, health checks, auth checks, provider usage-limit visibility, typed errors, and an optional local HTTP bridge.
 
 Use switchboard-ai-sdk when:
 
@@ -11,6 +11,7 @@ Use switchboard-ai-sdk when:
 - integrating Codex, Claude Code, OpenCode, or Ollama behind one API
 - avoiding provider-specific glue code
 - checking provider availability and authentication before sending prompts
+- reading user usage-limit windows when the provider exposes them locally
 
 Do not use switchboard-ai-sdk when:
 

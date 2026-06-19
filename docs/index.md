@@ -20,6 +20,7 @@ It normalizes the differences between local AI providers so you can:
 - **Connect** to Codex, Claude Code, Ollama, or OpenCode by id
 - **Chat** through a unified interface that mirrors traditional LLM API calls
 - **Check health** and **auth state** before sending prompts
+- **Inspect provider usage limits** such as used percentage, remaining percentage, and reset windows when the provider exposes them locally
 - **Run a local HTTP bridge** when the caller isn't a Node.js process
 
 ## Why switchboard-ai-sdk?
@@ -33,6 +34,7 @@ switchboard-ai-sdk solves this by giving you one integration path across all fou
 - **Direct SDK first** — Use it in-process in Node.js or Electron. No server required.
 - **Provider identity remains visible** — You know which tool you're talking to. Capabilities and agent behavior stay explicit.
 - **Health and auth are first-class** — Check if a tool is ready before sending prompts. Auth failures have clear diagnostics.
+- **Usage limits are visible when available** — Surface user-facing quota windows from providers like Codex and Claude Code without custom provider parsing in your app.
 - **Typed errors** — `ToolNotFoundError`, `ToolAuthError`, `ProviderExecutionError`, `TimeoutError` — not opaque HTTP 500s.
 
 ## Install

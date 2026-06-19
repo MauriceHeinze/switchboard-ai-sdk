@@ -23,6 +23,13 @@ If you use OpenCode and do not have, or do not want to provide, a paid AI subscr
 
 The goal is simple: use local AI tools through an interface that feels like a traditional LLM provider API.
 
+It also exposes provider readiness details that are useful in settings UIs and diagnostics:
+
+- auth status
+- health status
+- model availability
+- provider usage-limit windows when the local provider exposes them, such as Codex and Claude Code
+
 ### How this works in practice
 
 Give users the freedom to select the AI tool they want, or steer them toward your recommendation. ```switchboard-ai-sdk``` supports the full flow end to end.
@@ -181,6 +188,22 @@ OpenCode's model lineup changes frequently, so this README does not try to mirro
 For OpenCode Go subscriptions: <https://opencode.ai/docs/go/>
 
 Opencode also offers free and strong models like DeepSeek V4 Flash that you can use.
+
+## Health, Auth, and Usage Limits
+
+Use the health API when you want more than a simple up/down check. It returns auth state for all providers and, when locally available, normalized usage-limit windows such as `five_hour` and `seven_day`.
+
+```ts
+import { checkAllToolsHealth } from "switchboard-ai-sdk";
+
+const tools = await checkAllToolsHealth();
+
+for (const tool of tools) {
+  console.log(tool.toolId, tool.status, tool.authStatus, tool.usageLimits);
+}
+```
+
+For Codex and Claude Code, `usageLimits` can include used percentage, remaining percentage, and reset timestamps. For OpenCode and Ollama, the field is returned as `not_available`.
 
 ## Run the Local HTTP Server
 

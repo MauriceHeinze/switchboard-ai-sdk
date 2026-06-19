@@ -118,7 +118,7 @@ curl http://127.0.0.1:3000/discover
 
 ### `GET /health`
 
-Returns aggregate health status of all tools.
+Returns aggregate health status of all tools, including auth state and normalized provider usage-limit windows when a provider exposes them locally.
 
 ```bash
 curl http://127.0.0.1:3000/health
@@ -163,6 +163,8 @@ curl http://127.0.0.1:3000/health
 ```
 
 ### `GET /health/:toolId`
+
+Returns the same normalized auth and usage-limit fields for one tool.
 
 ```bash
 curl http://127.0.0.1:3000/health/codex
