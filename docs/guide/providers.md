@@ -9,6 +9,13 @@ og:description: In-depth provider documentation for Codex, Claude Code, Ollama, 
 
 switchboard-ai-sdk normalizes four local AI providers behind one interface. Each provider has unique behavior, capabilities, and configuration that the SDK handles transparently.
 
+For provider-specific details, see the dedicated pages:
+
+- [Codex](/providers/codex)
+- [Claude Code](/providers/claude-code)
+- [OpenCode](/providers/opencode)
+- [Ollama](/providers/ollama)
+
 ## Provider Overview
 
 | | Codex | Claude Code | Ollama | OpenCode |
