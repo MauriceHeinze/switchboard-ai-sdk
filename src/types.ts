@@ -82,6 +82,24 @@ export type ToolAuthStartResult = {
   output?: string;
 };
 
+export type UsageLimitWindowKey = "five_hour" | "seven_day";
+
+export type ToolUsageLimitWindow = {
+  usedPercentage: number;
+  remainingPercentage: number;
+  resetsAt: string;
+};
+
+export type ToolUsageLimitsStatus = "available" | "not_available" | "unknown";
+
+export type ToolUsageLimits = {
+  status: ToolUsageLimitsStatus;
+  source?: "local_session";
+  plan?: string;
+  windows?: Partial<Record<UsageLimitWindowKey, ToolUsageLimitWindow>>;
+  reason?: string;
+};
+
 export type ToolMessage = {
   role: "assistant";
   content: string;

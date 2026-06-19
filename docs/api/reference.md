@@ -299,6 +299,25 @@ type DiscoverResponse = {
 ### `HealthResponse`
 
 ```ts
+type UsageLimits = {
+  status: "available" | "not_available" | "unknown";
+  source?: "local_session";
+  plan?: string;
+  windows?: {
+    five_hour?: {
+      usedPercentage: number;
+      remainingPercentage: number;
+      resetsAt: string;
+    };
+    seven_day?: {
+      usedPercentage: number;
+      remainingPercentage: number;
+      resetsAt: string;
+    };
+  };
+  reason?: string;
+};
+
 type HealthResponse = {
   toolId: string;
   status: "healthy" | "unavailable" | "timeout" | "error";
@@ -306,6 +325,7 @@ type HealthResponse = {
   authSupported: boolean;
   authenticated: boolean | null;
   authStatus: "authenticated" | "unauthenticated" | "not_supported" | "unknown";
+  usageLimits: UsageLimits;
   version?: string;
   reason?: string;
   latencyMs: number;

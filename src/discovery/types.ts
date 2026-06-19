@@ -3,6 +3,7 @@ import type {
   DiscoveredTool,
   ToolAuthCheckResult,
   ToolAuthStartResult,
+  ToolUsageLimits,
   ToolInvocationOptions
 } from "../types.js";
 
@@ -13,6 +14,10 @@ export type ProviderDefinition = {
     tool: DiscoveredTool,
     options?: ToolInvocationOptions
   ): Promise<ToolAuthCheckResult>;
+  checkUsageLimits?(
+    tool: DiscoveredTool,
+    options?: ToolInvocationOptions
+  ): Promise<ToolUsageLimits>;
   startAuth?(
     tool: DiscoveredTool,
     options?: ToolInvocationOptions

@@ -18,7 +18,8 @@ import type {
   DiscoveredTool,
   ProviderId,
   ToolAuthCheckResult,
-  ToolInvocationOptions
+  ToolInvocationOptions,
+  ToolUsageLimits
 } from "../types.js";
 import type {
   ChatToolOptions,
@@ -128,6 +129,22 @@ function getDefaultAuthState(tool: DiscoveredTool): ToolAuthCheckResult {
   };
 }
 
+function getDefaultUsageLimits(tool: DiscoveredTool): ToolUsageLimits {
+  const provider = providerRegistry[tool.id];
+
+  if (!provider?.checkUsageLimits) {
+    return {
+      status: "not_available",
+      reason: "This provider does not expose usage limit information."
+    };
+  }
+
+  return {
+    status: "unknown",
+    reason: "Unable to determine usage limit information."
+  };
+}
+
 async function resolveToolAuthState(
   tool: DiscoveredTool,
   options: ToolOperationOptions = {}
@@ -160,6 +177,32 @@ async function resolveToolAuthState(
   }
 }
 
+async function resolveToolUsageLimits(
+  tool: DiscoveredTool,
+  options: ToolOperationOptions = {}
+): Promise<ToolUsageLimits> {
+  const provider = providerRegistry[tool.id];
+
+  if (!provider?.checkUsageLimits) {
+    return getDefaultUsageLimits(tool);
+  }
+
+  try {
+    return await withAbortableTimeout(
+      (invocationOptions) => provider.checkUsageLimits!(tool, invocationOptions),
+      options.timeoutMs
+    );
+  } catch (error) {
+    return {
+      status: "unknown",
+      reason:
+        error instanceof Error
+          ? error.message
+          : "Unable to determine usage limit information."
+    };
+  }
+}
+
 async function buildToolHealthResult(
   discoveredTool: DiscoveredTool,
   options: ToolOperationOptions = {}
@@ -170,6 +213,7 @@ async function buildToolHealthResult(
   try {
     if (!discoveredTool.available) {
       const authState = getDefaultAuthState(discoveredTool);
+      const usageLimits = await resolveToolUsageLimits(discoveredTool, options);
 
       return {
         toolId: discoveredTool.id,
@@ -178,6 +222,7 @@ async function buildToolHealthResult(
         authSupported: authState.authSupported,
         authenticated: authState.authenticated,
         authStatus: authState.authStatus,
+        usageLimits,
         version: discoveredTool.version,
         reason: getUnavailableReason(discoveredTool),
         latencyMs: Date.now() - startedAt,
@@ -185,9 +230,10 @@ async function buildToolHealthResult(
       };
     }
 
-    const [tool, authState] = await Promise.all([
+    const [tool, authState, usageLimits] = await Promise.all([
       getConnectedTool(discoveredTool, options.timeoutMs),
-      resolveToolAuthState(discoveredTool, options)
+      resolveToolAuthState(discoveredTool, options),
+      resolveToolUsageLimits(discoveredTool, options)
     ]);
 
     if (authState.authSupported && authState.authenticated === false) {
@@ -198,6 +244,7 @@ async function buildToolHealthResult(
         authSupported: authState.authSupported,
         authenticated: authState.authenticated,
         authStatus: authState.authStatus,
+        usageLimits,
         version: discoveredTool.version,
         reason:
           authState.reason ??
@@ -219,6 +266,7 @@ async function buildToolHealthResult(
       authSupported: authState.authSupported,
       authenticated: authState.authenticated,
       authStatus: authState.authStatus,
+      usageLimits,
       version: discoveredTool.version,
       reason: healthy
         ? authState.reason
@@ -235,6 +283,7 @@ async function buildToolHealthResult(
         authSupported: getDefaultAuthState(discoveredTool).authSupported,
         authenticated: null,
         authStatus: "unknown",
+        usageLimits: getDefaultUsageLimits(discoveredTool),
         version: discoveredTool.version,
         reason: error.message,
         latencyMs: Date.now() - startedAt,
@@ -250,6 +299,7 @@ async function buildToolHealthResult(
         authSupported: getDefaultAuthState(discoveredTool).authSupported,
         authenticated: false,
         authStatus: error instanceof ToolAuthError ? "unauthenticated" : "unknown",
+        usageLimits: getDefaultUsageLimits(discoveredTool),
         version: discoveredTool.version,
         reason: error.message,
         latencyMs: Date.now() - startedAt,

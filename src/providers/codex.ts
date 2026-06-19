@@ -16,7 +16,9 @@ import type {
   DiscoveredTool,
   ToolAuthCheckResult,
   ToolAuthStartResult,
-  ToolInvocationOptions
+  ToolInvocationOptions,
+  ToolUsageLimitWindow,
+  UsageLimitWindowKey
 } from "../types.js";
 import {
   alreadyAuthenticated,
@@ -31,6 +33,13 @@ import {
   getConfiguredCodexModel,
   resolveRequestedModel
 } from "./model-discovery.js";
+import {
+  availableUsageLimits,
+  createUsageLimitWindow,
+  findLatestCodexUsageLimits,
+  isRecord,
+  unknownUsageLimits
+} from "./usage-limits.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
 import { createProviderExecutionError } from "./error-classification.js";
 
@@ -56,6 +65,12 @@ type CodexExecEvent = {
     text?: string;
   };
   usage?: Record<string, number>;
+};
+
+type CodexRateLimitWindow = {
+  used_percent?: unknown;
+  resets_at?: unknown;
+  window_minutes?: unknown;
 };
 
 function getCodexSandboxMode(): string {
@@ -133,6 +148,78 @@ function isCodexAuthError(stderr: string): boolean {
 
 function getCodexAuthCommand(args: readonly string[]): string {
   return ["codex", ...args].join(" ");
+}
+
+function parseCodexRateLimitWindow(
+  value: unknown
+): { key: "five_hour" | "seven_day"; window: ReturnType<typeof createUsageLimitWindow> } | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const usedPercent = value.used_percent;
+  const resetsAt = value.resets_at;
+  const windowMinutes = value.window_minutes;
+
+  if (
+    typeof usedPercent !== "number" ||
+    !Number.isFinite(usedPercent) ||
+    typeof resetsAt !== "number" ||
+    !Number.isFinite(resetsAt) ||
+    typeof windowMinutes !== "number" ||
+    !Number.isFinite(windowMinutes)
+  ) {
+    return undefined;
+  }
+
+  const key =
+    windowMinutes === 300
+      ? "five_hour"
+      : windowMinutes === 10_080
+        ? "seven_day"
+        : undefined;
+
+  if (!key) {
+    return undefined;
+  }
+
+  return {
+    key,
+    window: createUsageLimitWindow(usedPercent, resetsAt)
+  };
+}
+
+export function parseCodexUsageLimitsSnapshot(
+  value: unknown
+): ReturnType<typeof availableUsageLimits> | undefined {
+  if (!isRecord(value) || !isRecord(value.payload)) {
+    return undefined;
+  }
+
+  const payload = value.payload;
+
+  if (payload.type !== "token_count" || !isRecord(payload.rate_limits)) {
+    return undefined;
+  }
+
+  const rateLimits = payload.rate_limits;
+  const windows: Partial<Record<UsageLimitWindowKey, ToolUsageLimitWindow>> = {};
+
+  for (const candidate of [rateLimits.primary, rateLimits.secondary]) {
+    const parsedWindow = parseCodexRateLimitWindow(candidate);
+
+    if (parsedWindow) {
+      windows[parsedWindow.key] = parsedWindow.window;
+    }
+  }
+
+  if (Object.keys(windows).length === 0) {
+    return undefined;
+  }
+
+  return availableUsageLimits(windows, {
+    plan: typeof rateLimits.plan_type === "string" ? rateLimits.plan_type : undefined
+  });
 }
 
 export function parseCodexAuthStatusOutput(
@@ -231,6 +318,19 @@ async function startCodexAuth(
   } catch (error) {
     return failedAuth(command, toErrorMessage(error));
   }
+}
+
+async function checkCodexUsageLimits() {
+  const latestSnapshot = await findLatestCodexUsageLimits(
+    parseCodexUsageLimitsSnapshot
+  );
+
+  return (
+    latestSnapshot ??
+    unknownUsageLimits(
+      "No local Codex usage limit snapshot is available yet."
+    )
+  );
 }
 
 export function parseCodexExecJsonOutput(stdout: string): {
@@ -368,6 +468,9 @@ export const codexProvider: ProviderDefinition = {
   },
   async checkAuth(_tool, options = {}) {
     return checkCodexAuth(options);
+  },
+  async checkUsageLimits() {
+    return checkCodexUsageLimits();
   },
   async startAuth(_tool, options = {}) {
     return startCodexAuth(options);

@@ -31,6 +31,14 @@ import {
   getConfiguredClaudeCodeModel,
   resolveRequestedModel
 } from "./model-discovery.js";
+import {
+  availableUsageLimits,
+  createUsageLimitWindow,
+  findLatestClaudeUsageLimits,
+  findNestedRecord,
+  isRecord,
+  unknownUsageLimits
+} from "./usage-limits.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
 import { createProviderExecutionError } from "./error-classification.js";
 
@@ -146,6 +154,49 @@ function isClaudeCodeAuthError(stderr: string): boolean {
 
 function getClaudeAuthCommand(args: readonly string[]): string {
   return ["claude", ...args].join(" ");
+}
+
+function parseClaudeCodeUsageLimitWindow(
+  value: unknown
+): ReturnType<typeof createUsageLimitWindow> | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const usedPercentage = value.used_percentage;
+  const resetsAt = value.resets_at;
+
+  if (
+    typeof usedPercentage !== "number" ||
+    !Number.isFinite(usedPercentage) ||
+    typeof resetsAt !== "number" ||
+    !Number.isFinite(resetsAt)
+  ) {
+    return undefined;
+  }
+
+  return createUsageLimitWindow(usedPercentage, resetsAt);
+}
+
+export function parseClaudeCodeUsageLimitsSnapshot(
+  value: unknown
+): ReturnType<typeof availableUsageLimits> | undefined {
+  const rateLimits = findNestedRecord(value, "rate_limits");
+
+  if (!rateLimits) {
+    return undefined;
+  }
+
+  const windows = {
+    five_hour: parseClaudeCodeUsageLimitWindow(rateLimits.five_hour),
+    seven_day: parseClaudeCodeUsageLimitWindow(rateLimits.seven_day)
+  };
+
+  if (!windows.five_hour && !windows.seven_day) {
+    return undefined;
+  }
+
+  return availableUsageLimits(windows);
 }
 
 export function parseClaudeCodeAuthStatusOutput(
@@ -281,6 +332,19 @@ async function startClaudeCodeAuth(
   } catch (error) {
     return failedAuth(command, toErrorMessage(error));
   }
+}
+
+async function checkClaudeCodeUsageLimits() {
+  const latestSnapshot = await findLatestClaudeUsageLimits(
+    parseClaudeCodeUsageLimitsSnapshot
+  );
+
+  return (
+    latestSnapshot ??
+    unknownUsageLimits(
+      "No local Claude Code usage limit snapshot is available yet."
+    )
+  );
 }
 
 export function parseClaudeCodeJsonOutput(stdout: string): {
@@ -432,6 +496,9 @@ export const claudeCodeProvider: ProviderDefinition = {
   },
   async checkAuth(_tool, options = {}) {
     return checkClaudeCodeAuth(options);
+  },
+  async checkUsageLimits() {
+    return checkClaudeCodeUsageLimits();
   },
   async startAuth(_tool, options = {}) {
     return startClaudeCodeAuth(options);

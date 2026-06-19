@@ -294,6 +294,23 @@ Response:
   "authSupported": true,
   "authenticated": true,
   "authStatus": "authenticated",
+  "usageLimits": {
+    "status": "available",
+    "source": "local_session",
+    "plan": "plus",
+    "windows": {
+      "five_hour": {
+        "usedPercentage": 36,
+        "remainingPercentage": 64,
+        "resetsAt": "2026-06-07T12:45:46.000Z"
+      },
+      "seven_day": {
+        "usedPercentage": 43,
+        "remainingPercentage": 57,
+        "resetsAt": "2026-06-11T17:49:07.000Z"
+      }
+    }
+  },
   "version": "codex-cli 0.136.0",
   "latencyMs": 406,
   "checkedAt": "2026-06-17T12:54:44.900Z"
@@ -315,6 +332,23 @@ Response:
       "authSupported": true,
       "authenticated": false,
       "authStatus": "unauthenticated",
+      "usageLimits": {
+        "status": "available",
+        "source": "local_session",
+        "plan": "plus",
+        "windows": {
+          "five_hour": {
+            "usedPercentage": 36,
+            "remainingPercentage": 64,
+            "resetsAt": "2026-06-07T12:45:46.000Z"
+          },
+          "seven_day": {
+            "usedPercentage": 43,
+            "remainingPercentage": 57,
+            "resetsAt": "2026-06-11T17:49:07.000Z"
+          }
+        }
+      },
       "reason": "Codex requires authentication before it can handle requests.",
       "latencyMs": 55,
       "checkedAt": "2026-06-17T12:54:44.900Z"

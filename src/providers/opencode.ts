@@ -32,6 +32,7 @@ import {
   getConfiguredModelInfo,
   resolveRequestedModel
 } from "./model-discovery.js";
+import { notAvailableUsageLimits } from "./usage-limits.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
 import { createProviderExecutionError } from "./error-classification.js";
 
@@ -461,6 +462,11 @@ export const opencodeProvider: ProviderDefinition = {
   },
   async checkAuth(_tool, options = {}) {
     return checkOpenCodeAuth(options);
+  },
+  async checkUsageLimits() {
+    return notAvailableUsageLimits(
+      "OpenCode does not expose usage limit windows through a stable local interface."
+    );
   },
   async startAuth(_tool, options = {}) {
     return startOpenCodeAuth(options);

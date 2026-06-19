@@ -22,6 +22,7 @@ import {
   resolveRequestedModel
 } from "./model-discovery.js";
 import { detectProviderFailureKind } from "./error-classification.js";
+import { notAvailableUsageLimits } from "./usage-limits.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "ollama",
@@ -316,6 +317,11 @@ export const ollamaProvider: ProviderDefinition = {
   },
   async checkAuth() {
     return notSupportedAuth("ollama");
+  },
+  async checkUsageLimits() {
+    return notAvailableUsageLimits(
+      "Ollama does not have provider-managed usage limit windows."
+    );
   },
   async startAuth() {
     return unsupportedAuth("ollama");

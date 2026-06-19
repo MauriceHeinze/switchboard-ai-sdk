@@ -7,6 +7,7 @@ import type {
   ProviderConfig,
   RoutedChatOptions,
   RoutedChatResponse,
+  ToolUsageLimits,
   ToolAuthStartStatus,
   ToolResult
 } from "../types.js";
@@ -20,6 +21,7 @@ export type ToolHealthResult = {
   authSupported: boolean;
   authenticated: boolean | null;
   authStatus: AuthStatus;
+  usageLimits: ToolUsageLimits;
   version?: string;
   reason?: string;
   latencyMs: number;

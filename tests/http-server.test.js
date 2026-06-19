@@ -47,6 +47,24 @@ async function startServer(overrides = {}) {
           return true;
         }
       };
+    },
+    async checkUsageLimits() {
+      return {
+        status: "available",
+        source: "local_session",
+        windows: {
+          five_hour: {
+            usedPercentage: 22,
+            remainingPercentage: 78,
+            resetsAt: "2026-06-19T15:00:00.000Z"
+          },
+          seven_day: {
+            usedPercentage: 35,
+            remainingPercentage: 65,
+            resetsAt: "2026-06-22T00:00:00.000Z"
+          }
+        }
+      };
     }
   };
 
@@ -88,6 +106,12 @@ async function startServer(overrides = {}) {
         authStatus: "not_supported"
       };
     },
+    async checkUsageLimits() {
+      return {
+        status: "not_available",
+        reason: "Ollama does not have provider-managed usage limit windows."
+      };
+    },
     async startAuth() {
       return {
         status: "unsupported",
@@ -118,6 +142,13 @@ async function startServer(overrides = {}) {
         async health() {
           return true;
         }
+      };
+    },
+    async checkUsageLimits() {
+      return {
+        status: "not_available",
+        reason:
+          "OpenCode does not expose usage limit windows through a stable local interface."
       };
     }
   };
@@ -153,6 +184,25 @@ async function startServer(overrides = {}) {
           return {
             echoedMessages: input.messages
           };
+        }
+      };
+    },
+    async checkUsageLimits() {
+      return {
+        status: "available",
+        source: "local_session",
+        plan: "plus",
+        windows: {
+          five_hour: {
+            usedPercentage: 36,
+            remainingPercentage: 64,
+            resetsAt: "2026-06-19T15:00:00.000Z"
+          },
+          seven_day: {
+            usedPercentage: 43,
+            remainingPercentage: 57,
+            resetsAt: "2026-06-22T00:00:00.000Z"
+          }
         }
       };
     },
@@ -212,7 +262,16 @@ test("GET /health returns server liveness without auth", async () => {
         (tool) =>
           tool.toolId === "codex" &&
           tool.status === "healthy" &&
-          tool.authSupported === false
+          tool.authSupported === false &&
+          tool.usageLimits?.status === "available" &&
+          tool.usageLimits?.windows?.five_hour?.remainingPercentage === 64
+      )
+    );
+    assert.ok(
+      body.tools.some(
+        (tool) =>
+          tool.toolId === "ollama" &&
+          tool.usageLimits?.status === "not_available"
       )
     );
   } finally {
@@ -410,6 +469,7 @@ test("GET /health/:toolId reports unavailable tools", async () => {
     assert.equal(body.status, "unavailable");
     assert.equal(body.reason, "CLI not found.");
     assert.equal(body.authStatus, "not_supported");
+    assert.equal(body.usageLimits.status, "available");
   } finally {
     await stopServer(serverState);
   }
@@ -437,6 +497,7 @@ test("GET /health/:toolId reports unauthenticated tools distinctly", async () =>
     assert.equal(body.authSupported, true);
     assert.equal(body.authenticated, false);
     assert.equal(body.authStatus, "unauthenticated");
+    assert.equal(body.usageLimits.status, "available");
   } finally {
     await stopServer(serverState);
   }

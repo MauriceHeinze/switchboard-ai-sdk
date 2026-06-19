@@ -7,11 +7,13 @@ import {
 } from "../dist/errors/errors.js";
 import {
   parseClaudeCodeAuthStatusOutput,
-  parseClaudeCodeJsonOutput
+  parseClaudeCodeJsonOutput,
+  parseClaudeCodeUsageLimitsSnapshot
 } from "../dist/providers/claude-code.js";
 import {
   parseCodexAuthStatusOutput,
-  parseCodexExecJsonOutput
+  parseCodexExecJsonOutput,
+  parseCodexUsageLimitsSnapshot
 } from "../dist/providers/codex.js";
 import {
   buildOpenCodeArgs,
@@ -128,6 +130,42 @@ test("parseClaudeCodeAuthStatusOutput parses unauthenticated JSON", () => {
   });
 });
 
+test("parseClaudeCodeUsageLimitsSnapshot extracts five-hour and seven-day windows", () => {
+  const result = parseClaudeCodeUsageLimitsSnapshot({
+    type: "status",
+    payload: {
+      rate_limits: {
+        five_hour: {
+          used_percentage: 23.5,
+          resets_at: 1738425600
+        },
+        seven_day: {
+          used_percentage: 41.2,
+          resets_at: 1738857600
+        }
+      }
+    }
+  });
+
+  assert.deepEqual(result, {
+    status: "available",
+    source: "local_session",
+    plan: undefined,
+    windows: {
+      five_hour: {
+        usedPercentage: 23.5,
+        remainingPercentage: 76.5,
+        resetsAt: "2025-02-01T16:00:00.000Z"
+      },
+      seven_day: {
+        usedPercentage: 41.2,
+        remainingPercentage: 58.8,
+        resetsAt: "2025-02-06T16:00:00.000Z"
+      }
+    }
+  });
+});
+
 test("parseOpenCodeJsonOutput extracts text events", () => {
   const result = parseOpenCodeJsonOutput([
     JSON.stringify({
@@ -236,6 +274,47 @@ test("parseCodexAuthStatusOutput parses unauthenticated text", () => {
     reason: "Codex requires authentication before it can handle requests.",
     command: "codex login status",
     output
+  });
+});
+
+test("parseCodexUsageLimitsSnapshot extracts primary and secondary windows", () => {
+  const result = parseCodexUsageLimitsSnapshot({
+    timestamp: "2026-06-07T10:50:28.797Z",
+    type: "event_msg",
+    payload: {
+      type: "token_count",
+      rate_limits: {
+        primary: {
+          used_percent: 36,
+          window_minutes: 300,
+          resets_at: 1780836346
+        },
+        secondary: {
+          used_percent: 43,
+          window_minutes: 10080,
+          resets_at: 1781200147
+        },
+        plan_type: "plus"
+      }
+    }
+  });
+
+  assert.deepEqual(result, {
+    status: "available",
+    source: "local_session",
+    plan: "plus",
+    windows: {
+      five_hour: {
+        usedPercentage: 36,
+        remainingPercentage: 64,
+        resetsAt: "2026-06-07T12:45:46.000Z"
+      },
+      seven_day: {
+        usedPercentage: 43,
+        remainingPercentage: 57,
+        resetsAt: "2026-06-11T17:49:07.000Z"
+      }
+    }
   });
 });
 
