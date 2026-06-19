@@ -4,7 +4,7 @@
 
 # switchboard-ai-sdk
 
-`switchboard-ai-sdk` is a TypeScript SDK for connecting locally running JavaScript apps to local  AI tools like Codex through one API.
+`switchboard-ai-sdk` is a TypeScript SDK for Node.js and Electron apps that lets developers discover and use local AI tools already installed on a user's machine, including Codex, Claude Code, OpenCode, and Ollama, through one consistent API.
 
 This is the main project overview and getting-started guide. For response shapes, endpoint payloads, and provider-specific API behavior, see [docs/API-REFERENCE.md](docs/API-REFERENCE.md). For apps that want to call the SDK directly without exposing HTTP, see [docs/SDK-USAGE.md](docs/SDK-USAGE.md).
 
@@ -17,7 +17,7 @@ It discovers and connects to local AI tools like:
 - Claude Code
 - OpenCode
 
-It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they or their users already have, like Codex, Claude Code, OpenCode, or Ollama.
+It is especially useful for developers who want to avoid paying for hosted LLM APIs and instead use local tools they or their users already have, like Codex, Claude Code, OpenCode, or Ollama, through one consistent API.
 
 If you use OpenCode and do not have, or do not want to provide, a paid AI subscription, you can point it at OpenCode's free hosted models.
 
@@ -257,6 +257,16 @@ Other valid examples:
 SWITCHBOARD_OPENCODE_MODEL=opencode-go/kimi-k2.7-code
 SWITCHBOARD_OPENCODE_MODEL=openai/gpt-5.5
 ```
+
+## Documentation
+
+- [Docs site](https://mauriceheinze.github.io/switchboard-ai-sdk/)
+- [Getting Started](https://mauriceheinze.github.io/switchboard-ai-sdk/guide/getting-started)
+- [API Reference](https://mauriceheinze.github.io/switchboard-ai-sdk/api/reference)
+- [Examples](https://mauriceheinze.github.io/switchboard-ai-sdk/examples)
+- [Compare with alternatives](https://mauriceheinze.github.io/switchboard-ai-sdk/compare)
+- [For AI Agents](https://mauriceheinze.github.io/switchboard-ai-sdk/for-ai-agents)
+- [llms.txt](https://mauriceheinze.github.io/switchboard-ai-sdk/llms.txt)
 
 ## License
 
