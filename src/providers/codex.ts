@@ -32,6 +32,7 @@ import {
   resolveRequestedModel
 } from "./model-discovery.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
+import { createProviderExecutionError } from "./error-classification.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "codex",
@@ -255,7 +256,7 @@ export function parseCodexExecJsonOutput(stdout: string): {
     );
 
   if (!messageEvent?.item?.text) {
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       "Codex did not return a final agent message."
     );
@@ -354,9 +355,10 @@ export const codexProvider: ProviderDefinition = {
             );
           }
 
-          throw new ProviderExecutionError(
+          throw createProviderExecutionError(
             tool.id,
-            `Codex execution failed: ${toErrorMessage(error)}`
+            `Codex execution failed: ${toErrorMessage(error)}`,
+            stderr
           );
         }
       }

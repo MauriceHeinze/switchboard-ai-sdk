@@ -1,3 +1,5 @@
+import type { RoutingAttempt } from "../types.js";
+
 export class ToolNotFoundError extends Error {
   constructor(toolId: string) {
     super(`No provider named "${toolId}" is registered.`);
@@ -26,9 +28,35 @@ export class ProviderExecutionError extends Error {
   }
 }
 
+export class RateLimitError extends ProviderExecutionError {
+  constructor(toolId: string, message?: string) {
+    super(toolId, message ?? `The provider "${toolId}" is currently rate-limited.`);
+    this.name = "RateLimitError";
+  }
+}
+
+export class QuotaExceededError extends ProviderExecutionError {
+  constructor(toolId: string, message?: string) {
+    super(toolId, message ?? `The provider "${toolId}" has exhausted its quota.`);
+    this.name = "QuotaExceededError";
+  }
+}
+
 export class TimeoutError extends Error {
   constructor(message = "The operation timed out.") {
     super(message);
     this.name = "TimeoutError";
+  }
+}
+
+export class FallbackExhaustedError extends Error {
+  attempts: RoutingAttempt[];
+  lastError: Error;
+
+  constructor(attempts: RoutingAttempt[], lastError: Error) {
+    super("All preferred providers failed.");
+    this.name = "FallbackExhaustedError";
+    this.attempts = attempts;
+    this.lastError = lastError;
   }
 }

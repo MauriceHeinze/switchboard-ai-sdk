@@ -93,6 +93,47 @@ export type ToolResult = {
   metadata?: Record<string, unknown>;
 };
 
+export type ChatToolResponse = {
+  toolId: ProviderId;
+  type: ToolType;
+  model?: string;
+  warnings?: string[];
+  result: ToolResult;
+  latencyMs: number;
+};
+
+export type RoutingFailureReason =
+  | "unavailable"
+  | "unauthenticated"
+  | "quota_exceeded"
+  | "rate_limited"
+  | "timeout"
+  | "provider_execution_failed";
+
+export type AttemptStage = "preflight" | "execution";
+
+export type RoutingAttempt = {
+  toolId: ProviderId;
+  tryIndex: number;
+  stage: AttemptStage;
+  outcome: "skipped" | "failed" | "succeeded";
+  reason?: RoutingFailureReason;
+  message?: string;
+  latencyMs?: number;
+};
+
+export type RoutedChatOptions = {
+  providers: ProviderId[];
+  timeoutMs?: number;
+  perAttemptTimeoutMs?: number;
+  retries?: number;
+};
+
+export type RoutedChatResponse = ChatToolResponse & {
+  attempts: RoutingAttempt[];
+  fallbackUsed: boolean;
+};
+
 export type ConnectedTool = {
   id: ProviderId;
   name: string;

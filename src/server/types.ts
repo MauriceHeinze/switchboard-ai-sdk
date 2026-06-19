@@ -1,12 +1,14 @@
 import type {
   AuthStatus,
   ChatInput,
+  ChatToolResponse,
   DiscoveredTool,
   ProviderId,
   ProviderConfig,
+  RoutedChatOptions,
+  RoutedChatResponse,
   ToolAuthStartStatus,
-  ToolResult,
-  ToolType
+  ToolResult
 } from "../types.js";
 
 export type ToolHealthStatus = "healthy" | "unavailable" | "timeout" | "error";
@@ -55,19 +57,22 @@ export type ToolAuthResponse = {
 };
 
 export type ChatToolRequest = ChatInput;
-
-export type ChatToolResponse = {
-  toolId: ProviderId;
-  type: ToolType;
-  model?: string;
-  warnings?: string[];
-  result: ToolResult;
-  latencyMs: number;
-};
+export type { ChatToolResponse } from "../types.js";
 
 export type ChatToolOptions = {
   timeoutMs?: number;
 };
+
+export type RoutedChatRequest = ChatInput & {
+  providers: ProviderId[];
+  timeoutMs?: number;
+  perAttemptTimeoutMs?: number;
+  retries?: number;
+};
+
+export type RoutedChatRequestOptions = RoutedChatOptions;
+
+export type RoutedChatToolResponse = RoutedChatResponse;
 
 export type ToolOperationOptions = {
   timeoutMs?: number;

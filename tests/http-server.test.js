@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import {
+  RateLimitError,
+  TimeoutError
+} from "../dist/errors/errors.js";
 import { configure } from "../dist/index.js";
 import { createSwitchboardServer } from "../dist/server/http.js";
 import { getProviderConfig } from "../dist/config.js";
@@ -620,8 +624,7 @@ test("POST /chat/:toolId returns timeout errors", async () => {
           return true;
         },
         async chat() {
-          await new Promise((resolve) => setTimeout(resolve, 100));
-          return "late";
+          throw new TimeoutError();
         }
       };
     }
@@ -642,6 +645,205 @@ test("POST /chat/:toolId returns timeout errors", async () => {
 
     assert.equal(response.status, 504);
     assert.equal(body.error.code, "timeout");
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /chat/:toolId maps rate limits to 429", async () => {
+  const serverState = await startServer({
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        },
+        async chat() {
+          throw new RateLimitError(tool.id, "provider is rate limited");
+        }
+      };
+    }
+  });
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/chat/codex"), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        messages: [{ role: "user", content: "hello" }]
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 429);
+    assert.equal(body.error.code, "rate_limited");
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /chat retries timeouts before falling back", async () => {
+  let codexCalls = 0;
+
+  const serverState = await startServer();
+
+  providerRegistry.codex = {
+    async discover() {
+      return {
+        id: "codex",
+        name: "Codex",
+        type: "agent",
+        available: true,
+        capabilities: ["chat", "health-check"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        },
+        async chat() {
+          codexCalls += 1;
+          throw new TimeoutError();
+        }
+      };
+    }
+  };
+  providerRegistry.ollama = {
+    async discover() {
+      return {
+        id: "ollama",
+        name: "Ollama",
+        type: "runtime",
+        available: true,
+        capabilities: ["chat", "health-check"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        },
+        async chat() {
+          return {
+            message: {
+              role: "assistant",
+              content: "ollama fallback"
+            }
+          };
+        }
+      };
+    }
+  };
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/chat"), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        providers: ["codex", "ollama"],
+        messages: [{ role: "user", content: "hello" }],
+        retries: 1
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(codexCalls, 2);
+    assert.equal(body.toolId, "ollama");
+    assert.equal(body.fallbackUsed, true);
+    assert.equal(body.attempts.length, 3);
+  } finally {
+    await stopServer(serverState);
+  }
+});
+
+test("POST /chat returns fallback exhaustion details", async () => {
+  const serverState = await startServer();
+
+  providerRegistry.codex = {
+    async discover() {
+      return {
+        id: "codex",
+        name: "Codex",
+        type: "agent",
+        available: false,
+        capabilities: ["chat", "health-check"],
+        metadata: {
+          reason: "codex unavailable"
+        }
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        }
+      };
+    }
+  };
+  providerRegistry.ollama = {
+    async discover() {
+      return {
+        id: "ollama",
+        name: "Ollama",
+        type: "runtime",
+        available: true,
+        capabilities: ["chat", "health-check"]
+      };
+    },
+    async connect(tool) {
+      return {
+        id: tool.id,
+        name: tool.name,
+        type: tool.type,
+        capabilities: tool.capabilities,
+        async health() {
+          return true;
+        },
+        async chat() {
+          throw new TimeoutError();
+        }
+      };
+    }
+  };
+
+  try {
+    const response = await fetch(createUrl(serverState.server, "/chat"), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        providers: ["codex", "ollama"],
+        messages: [{ role: "user", content: "hello" }]
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 503);
+    assert.equal(body.error.code, "fallback_exhausted");
+    assert.equal(Array.isArray(body.error.details.attempts), true);
+    assert.equal(body.error.details.attempts.length, 2);
   } finally {
     await stopServer(serverState);
   }

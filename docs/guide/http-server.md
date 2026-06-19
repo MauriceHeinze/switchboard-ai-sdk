@@ -41,6 +41,7 @@ server.listen(3000, "127.0.0.1");
 | `GET` | `/health/:toolId` | Health status of a specific tool |
 | `GET` | `/discover` | Discover available AI tools |
 | `POST` | `/auth/:toolId` | Start authentication for a provider |
+| `POST` | `/chat` | Route a chat request across preferred providers |
 | `POST` | `/chat/:toolId` | Send a chat prompt to a provider |
 
 ### `GET /config`
@@ -217,6 +218,45 @@ curl -X POST http://127.0.0.1:3000/chat/codex \
     }
   },
   "latencyMs": 8086
+}
+```
+
+### `POST /chat`
+
+Use this route when you want the server to retry and fall back across providers in the order you specify.
+
+```bash
+curl -X POST http://127.0.0.1:3000/chat \
+  -H "content-type: application/json" \
+  -d '{
+    "providers": ["codex", "claude-code", "opencode", "ollama"],
+    "messages": [
+      { "role": "user", "content": "Reply with a short list of 5 ideas." }
+    ],
+    "retries": 1,
+    "perAttemptTimeoutMs": 15000
+  }'
+```
+
+```json
+{
+  "toolId": "ollama",
+  "fallbackUsed": true,
+  "attempts": [
+    {
+      "toolId": "codex",
+      "tryIndex": 0,
+      "stage": "execution",
+      "outcome": "failed",
+      "reason": "timeout"
+    },
+    {
+      "toolId": "ollama",
+      "tryIndex": 0,
+      "stage": "execution",
+      "outcome": "succeeded"
+    }
+  ]
 }
 ```
 

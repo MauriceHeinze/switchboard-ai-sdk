@@ -33,6 +33,7 @@ import {
   resolveRequestedModel
 } from "./model-discovery.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
+import { createProviderExecutionError } from "./error-classification.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "opencode",
@@ -298,7 +299,7 @@ export function parseOpenCodeJsonOutput(stdout: string): {
       errorEvent.error.data?.message ??
       errorEvent.error.name ??
       "unknown error";
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       `OpenCode returned an error: ${errorMessage}`
     );
@@ -313,7 +314,7 @@ export function parseOpenCodeJsonOutput(stdout: string): {
   );
 
   if (textEvents.length === 0) {
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       "OpenCode did not return a text response."
     );
@@ -349,7 +350,7 @@ export function parseOpenCodeExecutionFailure(
     parseOpenCodeJsonOutput(output);
     return { authError: false };
   } catch (error) {
-    if (error instanceof ProviderExecutionError) {
+    if (error instanceof Error) {
       const authError = isOpenCodeAuthError(error.message) || isOpenCodeAuthError(output);
 
       return {
@@ -447,9 +448,10 @@ export const opencodeProvider: ProviderDefinition = {
             );
           }
 
-          throw new ProviderExecutionError(
+          throw createProviderExecutionError(
             tool.id,
-            `OpenCode execution failed: ${toErrorMessage(error)}`
+            `OpenCode execution failed: ${toErrorMessage(error)}`,
+            failureOutput
           );
         }
       }

@@ -5,6 +5,7 @@ import { URL } from "node:url";
 const require = createRequire(import.meta.url);
 const { version: PACKAGE_VERSION } = require("../../package.json");
 import {
+  chatWithFallbackRoute,
   discoverTools,
   checkAllToolsHealth,
   checkToolHealth,
@@ -14,7 +15,10 @@ import {
   updateServerConfig
 } from "./service.js";
 import {
+  FallbackExhaustedError,
   ProviderExecutionError,
+  QuotaExceededError,
+  RateLimitError,
   TimeoutError,
   ToolAuthError,
   ToolNotFoundError,
@@ -27,6 +31,7 @@ import type {
   DiscoverResponse,
   AggregateHealthResponse,
   ConfigResponse,
+  RoutedChatRequest,
   StartedSwitchboardServer,
   SwitchboardServerOptions
 } from "./types.js";
@@ -38,6 +43,7 @@ type JsonError = {
   error: {
     code: string;
     message: string;
+    details?: Record<string, unknown>;
   };
 };
 
@@ -58,12 +64,14 @@ function writeError(
   response: ServerResponse,
   statusCode: number,
   code: string,
-  message: string
+  message: string,
+  details?: Record<string, unknown>
 ): void {
   writeJson(response, statusCode, {
     error: {
       code,
-      message
+      message,
+      details
     }
   } satisfies JsonError);
 }
@@ -137,6 +145,64 @@ function validateChatRequest(body: unknown): ChatToolRequest {
   throw new TypeError("Request body must include messages.");
 }
 
+function validateRoutedChatRequest(body: unknown): RoutedChatRequest {
+  const input = validateChatRequest(body) as RoutedChatRequest;
+
+  if (!body || typeof body !== "object") {
+    throw new TypeError("Request body must be a JSON object.");
+  }
+
+  const candidate = body as Record<string, unknown>;
+
+  if (!Array.isArray(candidate.providers) || candidate.providers.length === 0) {
+    throw new TypeError("providers must be a non-empty array.");
+  }
+
+  const validProviders = candidate.providers.every(
+    (provider) =>
+      provider === "claude-code" ||
+      provider === "codex" ||
+      provider === "ollama" ||
+      provider === "opencode"
+  );
+
+  if (!validProviders) {
+    throw new TypeError("providers must contain supported provider ids.");
+  }
+
+  if (
+    candidate.perAttemptTimeoutMs !== undefined &&
+    (typeof candidate.perAttemptTimeoutMs !== "number" ||
+      !Number.isFinite(candidate.perAttemptTimeoutMs) ||
+      candidate.perAttemptTimeoutMs <= 0)
+  ) {
+    throw new TypeError(
+      "perAttemptTimeoutMs must be a positive number when provided."
+    );
+  }
+
+  if (
+    candidate.retries !== undefined &&
+    (typeof candidate.retries !== "number" ||
+      !Number.isFinite(candidate.retries) ||
+      candidate.retries < 0)
+  ) {
+    throw new TypeError("retries must be a non-negative number when provided.");
+  }
+
+  return {
+    ...input,
+    providers: candidate.providers,
+    timeoutMs:
+      typeof candidate.timeoutMs === "number" ? candidate.timeoutMs : undefined,
+    perAttemptTimeoutMs:
+      typeof candidate.perAttemptTimeoutMs === "number"
+        ? candidate.perAttemptTimeoutMs
+        : undefined,
+    retries: typeof candidate.retries === "number" ? candidate.retries : undefined
+  };
+}
+
 function validateConfigRequest(body: unknown): ProviderConfig {
   if (!body || typeof body !== "object" || Array.isArray(body)) {
     throw new TypeError("Request body must be a JSON object.");
@@ -181,6 +247,16 @@ function mapError(response: ServerResponse, error: unknown): void {
     return;
   }
 
+  if (error instanceof RateLimitError) {
+    writeError(response, 429, "rate_limited", error.message);
+    return;
+  }
+
+  if (error instanceof QuotaExceededError) {
+    writeError(response, 429, "quota_exceeded", error.message);
+    return;
+  }
+
   if (error instanceof ToolAuthError) {
     writeError(response, 401, "tool_auth_required", error.message);
     return;
@@ -193,6 +269,13 @@ function mapError(response: ServerResponse, error: unknown): void {
 
   if (error instanceof ProviderExecutionError) {
     writeError(response, 502, "provider_execution_failed", error.message);
+    return;
+  }
+
+  if (error instanceof FallbackExhaustedError) {
+    writeError(response, 503, "fallback_exhausted", error.message, {
+      attempts: error.attempts
+    });
     return;
   }
 
@@ -298,6 +381,27 @@ export function createSwitchboardServer(
         const timeoutMs = getTimeoutMs(body, maxTimeoutMs);
         const input = validateChatRequest(body);
         const result = await chatWithTool(toolId, input, { timeoutMs });
+
+        writeJson(response, 200, result);
+        return;
+      }
+
+      if (method === "POST" && url.pathname === "/chat") {
+        const body = await readJsonBody(request);
+        const input = validateRoutedChatRequest(body);
+
+        if (input.timeoutMs !== undefined) {
+          input.timeoutMs = Math.min(input.timeoutMs, maxTimeoutMs);
+        }
+
+        if (input.perAttemptTimeoutMs !== undefined) {
+          input.perAttemptTimeoutMs = Math.min(
+            input.perAttemptTimeoutMs,
+            maxTimeoutMs
+          );
+        }
+
+        const result = await chatWithFallbackRoute(input);
 
         writeJson(response, 200, result);
         return;

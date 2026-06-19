@@ -102,6 +102,29 @@ const result = await tool.chat(
 console.log(result.message.content);
 ```
 
+## Retry-Aware Fallback
+
+Use `chatWithFallback()` when you want a static provider order with immediate fallback on unavailable tools and retry-aware failover for execution issues like timeouts.
+
+```ts
+import { chatWithFallback } from "switchboard-ai-sdk";
+
+const response = await chatWithFallback(
+  {
+    messages: [{ role: "user", content: "Summarize this repo." }]
+  },
+  {
+    providers: ["codex", "claude-code", "opencode", "ollama"],
+    retries: 1,
+    perAttemptTimeoutMs: 15000
+  }
+);
+
+console.log(response.toolId);
+console.log(response.result.message.content);
+console.log(response.attempts);
+```
+
 ## Provider Config
 
 Call `configure()` before `connect()` or before starting the HTTP server when you want to overwrite global defaults for the current process. In most apps, you call it once during startup and reuse that config until you need to change it.
@@ -184,6 +207,7 @@ Endpoints:
 | GET | `/health` | See health and auth status of all AI tools |
 | GET | `/discover` | Discover available AI tools |
 | POST | `/auth/:toolId` | Start authentication process for specific AI tool   |
+| POST | `/chat` | Route across providers with retries and fallback |
 | POST | `/chat/:toolId` | Send prompt to specific AI tool |
 | GET | `/health/:toolId` | Get health status of specific AI tool |
 

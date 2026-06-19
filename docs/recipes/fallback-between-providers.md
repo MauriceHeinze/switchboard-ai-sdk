@@ -10,40 +10,21 @@ og:description: Pick the best available local AI tool at runtime and fall back a
 Pick a preferred provider and fall back if it is unavailable.
 
 ```ts
-import { discover, connect } from "switchboard-ai-sdk";
+import { chatWithFallback } from "switchboard-ai-sdk";
 
-async function chatWithFallback(prompt: string) {
-  const tools = await discover();
-  const preference = ["ollama", "opencode", "codex", "claude-code"];
-
-  const toolId = preference.find((id) =>
-    tools.some((t) => t.id === id && t.available)
+async function ask(prompt: string) {
+  const result = await chatWithFallback(
+    {
+      messages: [{ role: "user", content: prompt }]
+    },
+    {
+      providers: ["ollama", "opencode", "codex", "claude-code"],
+      retries: 1,
+      perAttemptTimeoutMs: 15000
+    }
   );
 
-  if (!toolId) {
-    throw new Error("No local AI tool is available.");
-  }
-
-  const tool = await connect(toolId);
-
-  if (tool.checkAuth) {
-    const auth = await tool.checkAuth();
-    if (auth.authStatus === "unauthenticated") {
-      const start = await tool.startAuth();
-      console.log("Auth required:", start.instructions);
-      return null;
-    }
-  }
-
-  if (!(await tool.health())) {
-    throw new Error(`${tool.name} is not healthy.`);
-  }
-
-  const result = await tool.chat({
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  return result.message.content;
+  return result.result.message.content;
 }
 ```
 

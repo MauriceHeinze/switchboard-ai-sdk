@@ -32,6 +32,7 @@ import {
   resolveRequestedModel
 } from "./model-discovery.js";
 import { chatInputToPrompt } from "./chat-prompt.js";
+import { createProviderExecutionError } from "./error-classification.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "claude-code",
@@ -292,7 +293,7 @@ export function parseClaudeCodeJsonOutput(stdout: string): {
   const trimmed = stdout.trim();
 
   if (!trimmed) {
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       "Claude Code did not return any output."
     );
@@ -301,14 +302,14 @@ export function parseClaudeCodeJsonOutput(stdout: string): {
   const parsed = JSON.parse(trimmed) as ClaudeCodeJsonOutput;
 
   if (parsed.is_error) {
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       `Claude Code returned an error: ${parsed.result ?? "unknown error"}`
     );
   }
 
   if (typeof parsed.result !== "string" || parsed.result.length === 0) {
-    throw new ProviderExecutionError(
+    throw createProviderExecutionError(
       TOOL.id,
       "Claude Code did not return a result."
     );
@@ -418,9 +419,10 @@ export const claudeCodeProvider: ProviderDefinition = {
             );
           }
 
-          throw new ProviderExecutionError(
+          throw createProviderExecutionError(
             tool.id,
-            `Claude Code execution failed: ${toErrorMessage(error)}`
+            `Claude Code execution failed: ${toErrorMessage(error)}`,
+            stderr
           );
         }
       }

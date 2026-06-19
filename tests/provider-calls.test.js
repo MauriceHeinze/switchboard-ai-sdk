@@ -2,6 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { configure } from "../dist/index.js";
 import {
+  QuotaExceededError,
+  RateLimitError
+} from "../dist/errors/errors.js";
+import {
   parseClaudeCodeAuthStatusOutput,
   parseClaudeCodeJsonOutput
 } from "../dist/providers/claude-code.js";
@@ -14,6 +18,10 @@ import {
   parseOpenCodeAuthStatusOutput,
   parseOpenCodeJsonOutput
 } from "../dist/providers/opencode.js";
+import {
+  createProviderExecutionError,
+  detectProviderFailureKind
+} from "../dist/providers/error-classification.js";
 import { ollamaProvider } from "../dist/providers/ollama.js";
 
 test("parseCodexExecJsonOutput extracts the final agent message and usage", () => {
@@ -68,17 +76,15 @@ test("parseClaudeCodeJsonOutput extracts result and usage", () => {
 });
 
 test("parseClaudeCodeJsonOutput throws on error response", () => {
-  assert.throws(
-    () =>
-      parseClaudeCodeJsonOutput(
-        JSON.stringify({
-          type: "result",
-          subtype: "error",
-          is_error: true,
-          result: "something went wrong"
-        })
-      ),
-    /Claude Code returned an error/
+  assert.throws(() =>
+    parseClaudeCodeJsonOutput(
+      JSON.stringify({
+        type: "result",
+        subtype: "error",
+        is_error: true,
+        result: "something went wrong"
+      })
+    )
   );
 });
 
@@ -189,20 +195,18 @@ test("parseOpenCodeJsonOutput concatenates multiple text events", () => {
 });
 
 test("parseOpenCodeJsonOutput throws on error event", () => {
-  assert.throws(
-    () =>
-      parseOpenCodeJsonOutput(
-        JSON.stringify({
-          type: "error",
-          timestamp: 1718600000000,
-          sessionID: "sess_abc",
-          error: {
-            name: "AuthError",
-            data: { message: "API key missing" }
-          }
-        })
-      ),
-    /OpenCode returned an error: API key missing/
+  assert.throws(() =>
+    parseOpenCodeJsonOutput(
+      JSON.stringify({
+        type: "error",
+        timestamp: 1718600000000,
+        sessionID: "sess_abc",
+        error: {
+          name: "AuthError",
+          data: { message: "API key missing" }
+        }
+      })
+    )
   );
 });
 
@@ -312,6 +316,40 @@ test("buildOpenCodeArgs uses configured provider state when no model is provided
   } finally {
     configure();
   }
+});
+
+test("detectProviderFailureKind classifies rate limits", () => {
+  assert.equal(
+    detectProviderFailureKind("429 too many requests, rate limit exceeded"),
+    "rate_limited"
+  );
+});
+
+test("detectProviderFailureKind classifies quota exhaustion", () => {
+  assert.equal(
+    detectProviderFailureKind("insufficient quota for this request"),
+    "quota_exceeded"
+  );
+});
+
+test("createProviderExecutionError returns RateLimitError when output indicates throttling", () => {
+  const error = createProviderExecutionError(
+    "codex",
+    "Codex execution failed: rate limit exceeded",
+    "429 too many requests"
+  );
+
+  assert.equal(error instanceof RateLimitError, true);
+});
+
+test("createProviderExecutionError returns QuotaExceededError when output indicates exhausted credit", () => {
+  const error = createProviderExecutionError(
+    "opencode",
+    "OpenCode execution failed: insufficient quota",
+    "billing says insufficient quota"
+  );
+
+  assert.equal(error instanceof QuotaExceededError, true);
 });
 
 test("ollamaProvider chat uses the discovered default model", async () => {

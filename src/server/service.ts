@@ -1,16 +1,19 @@
-import { connect } from "../connect.js";
+import { executeToolChat, getDiscoveredTool } from "../chat.js";
 import { configure, getProviderConfig } from "../config.js";
 import { discover } from "../discovery/discover.js";
 import { providerRegistry } from "../providers/index.js";
 import {
+  FallbackExhaustedError,
   ProviderExecutionError,
+  QuotaExceededError,
+  RateLimitError,
   TimeoutError,
   ToolAuthError,
   ToolNotFoundError,
   ToolUnavailableError
 } from "../errors/errors.js";
+import { chatWithFallback } from "../routing.js";
 import type {
-  ChatInput,
   ConnectedTool,
   DiscoveredTool,
   ProviderId,
@@ -22,12 +25,13 @@ import type {
   ChatToolRequest,
   ChatToolResponse,
   ConfigResponse,
+  RoutedChatRequest,
+  RoutedChatToolResponse,
   UpdateConfigRequest,
   ToolAuthResponse,
   ToolHealthResult,
   ToolOperationOptions
 } from "./types.js";
-import { resolveRequestedModel } from "../providers/model-discovery.js";
 
 function nowIsoString(): string {
   return new Date().toISOString();
@@ -89,17 +93,6 @@ async function withAbortableTimeout<T>(
       }
     );
   });
-}
-
-async function getDiscoveredTool(toolId: ProviderId): Promise<DiscoveredTool> {
-  const tools = await discover();
-  const tool = tools.find((candidate) => candidate.id === toolId);
-
-  if (!tool) {
-    throw new ToolNotFoundError(toolId);
-  }
-
-  return tool;
 }
 
 async function getConnectedTool(
@@ -306,15 +299,6 @@ export async function checkToolHealth(
   return buildToolHealthResult(discoveredTool, options);
 }
 
-function assertToolSupportsChat(tool: ConnectedTool): void {
-  if (!tool.chat) {
-    throw new ProviderExecutionError(
-      tool.id,
-      `${tool.name} does not support chat calls.`
-    );
-  }
-}
-
 export async function startToolAuth(
   toolId: ProviderId,
   options: ToolOperationOptions = {}
@@ -359,36 +343,29 @@ export async function chatWithTool(
   input: ChatToolRequest,
   options: ChatToolOptions = {}
 ): Promise<ChatToolResponse> {
-  const startedAt = Date.now();
-  const discoveredTool = await withTimeout(
-    getDiscoveredTool(toolId),
+  return withAbortableTimeout(
+    (invocationOptions) =>
+      executeToolChat(toolId, input, {
+        ...invocationOptions,
+        timeoutMs: options.timeoutMs ?? invocationOptions.timeoutMs
+      }),
     options.timeoutMs
   );
+}
 
-  if (!discoveredTool.available) {
-    throw new ToolUnavailableError(toolId, getUnavailableReason(discoveredTool));
-  }
-
-  const tool = await withTimeout(connect(toolId), options.timeoutMs);
-  assertToolSupportsChat(tool);
-  const modelSelection = resolveRequestedModel(discoveredTool, input.model);
-  const invocationInput = {
-    ...input,
-    model: modelSelection.model
-  } as ChatInput;
-
-  const result = await withAbortableTimeout(
-    (invocationOptions) => tool.chat(invocationInput, invocationOptions),
-    options.timeoutMs
+export async function chatWithFallbackRoute(
+  input: RoutedChatRequest
+): Promise<RoutedChatToolResponse> {
+  return chatWithFallback(
+    {
+      messages: input.messages,
+      model: input.model
+    },
+    {
+      providers: input.providers,
+      timeoutMs: input.timeoutMs,
+      perAttemptTimeoutMs: input.perAttemptTimeoutMs,
+      retries: input.retries
+    }
   );
-
-  return {
-    toolId,
-    type: tool.type,
-    model: modelSelection.model,
-    warnings:
-      modelSelection.warnings.length > 0 ? modelSelection.warnings : undefined,
-    result,
-    latencyMs: Date.now() - startedAt
-  };
 }

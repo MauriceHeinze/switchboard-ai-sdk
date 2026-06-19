@@ -1,7 +1,10 @@
 export { connect } from "./connect.js";
 export { configure } from "./config.js";
 export { discover } from "./discovery/discover.js";
+export { executeToolChat } from "./chat.js";
+export { chatWithFallback, rankProviders } from "./routing.js";
 export {
+  chatWithFallbackRoute,
   chatWithTool,
   checkAllToolsHealth,
   checkToolHealth,
@@ -16,11 +19,16 @@ export {
 export type {
   Capability,
   ChatInput,
+  ChatToolResponse,
   CodexSandboxMode,
   ConnectedTool,
   DiscoveredTool,
   ProviderConfig,
   ProviderId,
+  RoutedChatOptions,
+  RoutedChatResponse,
+  RoutingAttempt,
+  RoutingFailureReason,
   ToolMessage,
   ToolResult,
   ToolType
@@ -28,11 +36,12 @@ export type {
 export type {
   ChatToolOptions,
   ChatToolRequest,
-  ChatToolResponse,
   ConfigResponse,
   DiscoverResponse,
   AggregateHealthResponse,
   HealthResponse,
+  RoutedChatRequest,
+  RoutedChatToolResponse,
   StartedSwitchboardServer,
   SwitchboardServerOptions,
   ToolAuthResponse,
@@ -43,7 +52,10 @@ export type {
 } from "./server/types.js";
 
 export {
+  FallbackExhaustedError,
   ProviderExecutionError,
+  QuotaExceededError,
+  RateLimitError,
   TimeoutError,
   ToolAuthError,
   ToolNotFoundError,

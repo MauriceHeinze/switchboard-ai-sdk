@@ -1,6 +1,8 @@
 import { executeCommand } from "../runtime/execute.js";
 import {
   ProviderExecutionError,
+  QuotaExceededError,
+  RateLimitError,
   TimeoutError,
   ToolUnavailableError
 } from "../errors/errors.js";
@@ -19,6 +21,7 @@ import {
   getConfiguredModel,
   resolveRequestedModel
 } from "./model-discovery.js";
+import { detectProviderFailureKind } from "./error-classification.js";
 
 const TOOL: Omit<DiscoveredTool, "available" | "version" | "metadata"> = {
   id: "ollama",
@@ -138,11 +141,21 @@ async function requestOllama<T>(
 
   if (!response.ok) {
     const body = await response.text();
+    const message = `Ollama request failed with ${response.status}: ${
+      body || response.statusText
+    }`;
 
-    throw new ProviderExecutionError(
-      TOOL.id,
-      `Ollama request failed with ${response.status}: ${body || response.statusText}`
-    );
+    if (response.status === 429) {
+      const kind = detectProviderFailureKind(message);
+
+      if (kind === "quota_exceeded") {
+        throw new QuotaExceededError(TOOL.id, message);
+      }
+
+      throw new RateLimitError(TOOL.id, message);
+    }
+
+    throw new ProviderExecutionError(TOOL.id, message);
   }
 
   return response.json() as Promise<T>;
@@ -281,7 +294,13 @@ export const ollamaProvider: ProviderDefinition = {
 
           return normalizeOllamaChatResponse(result);
         } catch (error) {
-          if (error instanceof TimeoutError || error instanceof ToolUnavailableError) {
+          if (
+            error instanceof TimeoutError ||
+            error instanceof ToolUnavailableError ||
+            error instanceof ProviderExecutionError ||
+            error instanceof RateLimitError ||
+            error instanceof QuotaExceededError
+          ) {
             throw error;
           }
 

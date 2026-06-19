@@ -109,6 +109,55 @@ type ConnectedTool = {
 };
 ```
 
+### `rankProviders(preferred)`
+
+```ts
+import { rankProviders } from "switchboard-ai-sdk";
+
+const providers = rankProviders(["codex", "ollama", "codex"]);
+// ["codex", "ollama"]
+```
+
+### `chatWithFallback(input, options)`
+
+```ts
+import { chatWithFallback } from "switchboard-ai-sdk";
+
+const response = await chatWithFallback(
+  {
+    messages: [{ role: "user", content: "Reply in one sentence." }]
+  },
+  {
+    providers: ["codex", "claude-code", "opencode", "ollama"],
+    retries: 1,
+    perAttemptTimeoutMs: 15000
+  }
+);
+```
+
+Returns:
+
+```ts
+type RoutedChatResponse = ChatToolResponse & {
+  attempts: Array<{
+    toolId: "claude-code" | "codex" | "ollama" | "opencode";
+    tryIndex: number;
+    stage: "preflight" | "execution";
+    outcome: "skipped" | "failed" | "succeeded";
+    reason?:
+      | "unavailable"
+      | "unauthenticated"
+      | "quota_exceeded"
+      | "rate_limited"
+      | "timeout"
+      | "provider_execution_failed";
+    message?: string;
+    latencyMs?: number;
+  }>;
+  fallbackUsed: boolean;
+};
+```
+
 ## `tool.chat()` Response Shape
 
 `chat()` returns this result format:
@@ -135,8 +184,11 @@ Direct SDK calls throw typed errors:
 - `ToolNotFoundError`
 - `ToolUnavailableError`
 - `ProviderExecutionError`
+- `RateLimitError`
+- `QuotaExceededError`
 - `TimeoutError`
 - `ToolAuthError`
+- `FallbackExhaustedError`
 
 Use the HTTP server only if you want those failures translated into HTTP statuses and JSON error payloads.
 
@@ -328,6 +380,54 @@ Response:
     }
   },
   "latencyMs": 8086
+}
+```
+
+### `POST /chat` request
+
+```json
+{
+  "providers": ["codex", "claude-code", "opencode", "ollama"],
+  "messages": [
+    {
+      "role": "user",
+      "content": "Reply with a short list of 5 ideas."
+    }
+  ],
+  "retries": 1,
+  "perAttemptTimeoutMs": 15000
+}
+```
+
+### `POST /chat` response
+
+```json
+{
+  "toolId": "ollama",
+  "type": "runtime",
+  "result": {
+    "message": {
+      "role": "assistant",
+      "content": "1. Add a lightweight onboarding flow..."
+    }
+  },
+  "latencyMs": 2200,
+  "fallbackUsed": true,
+  "attempts": [
+    {
+      "toolId": "codex",
+      "tryIndex": 0,
+      "stage": "execution",
+      "outcome": "failed",
+      "reason": "timeout"
+    },
+    {
+      "toolId": "ollama",
+      "tryIndex": 0,
+      "stage": "execution",
+      "outcome": "succeeded"
+    }
+  ]
 }
 ```
 
