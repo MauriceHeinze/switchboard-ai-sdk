@@ -287,7 +287,7 @@ Response:
   "toolId": "codex",
   "status": "started",
   "authenticated": false,
-  "command": "codex login --device-auth",
+  "command": "codex login",
   "instructions": "Visit https://example.com/device and enter the code shown by Codex.",
   "output": "Visit https://example.com/device and enter the code shown by Codex.",
   "checkedAt": "2026-06-17T12:54:44.900Z"

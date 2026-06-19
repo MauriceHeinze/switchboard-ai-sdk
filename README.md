@@ -183,7 +183,7 @@ Endpoints:
 | PUT | `/config` | Replace the current process-level provider config |
 | GET | `/health` | See health and auth status of all AI tools |
 | GET | `/discover` | Discover available AI tools |
-| POST | `/auth/:toolId` | Start authenticatation process for specific AI tool   |
+| POST | `/auth/:toolId` | Start authentication process for specific AI tool   |
 | POST | `/chat/:toolId` | Send prompt to specific AI tool |
 | GET | `/health/:toolId` | Get health status of specific AI tool |
 
