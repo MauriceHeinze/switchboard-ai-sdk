@@ -1,0 +1,413 @@
+# switchboard-ai-sdk — Full Documentation
+
+## Overview
+
+switchboard-ai-sdk is an open-source TypeScript SDK that lets Node.js and Electron apps discover and use AI tools already installed on the local machine through one consistent API. It normalizes the differences between Codex, Claude Code, Ollama, and OpenCode so developers can write one integration instead of four.
+
+The SDK supports two integration paths:
+1. **Direct SDK** — In-process usage for Node.js and Electron
+2. **HTTP Bridge** — Local HTTP server for non-Node.js callers
+
+Core design principles:
+- Direct SDK first, HTTP bridge second
+- Provider identity and capabilities remain explicit
+- Auth, availability, and timeout failures are easy to diagnose
+- Typed errors instead of opaque HTTP 500s
+- Agent vs runtime tools are clearly distinguished
+
+## Installation
+
+```bash
+npm install switchboard-ai-sdk
+```
+
+Requires Node.js 18+ and at least one local AI tool installed (Codex, Claude Code, Ollama, or OpenCode).
+
+## Quick Start
+
+```ts
+import { connect, discover } from "switchboard-ai-sdk";
+
+const tools = await discover();
+const toolId = tools.find((tool) => tool.available)?.id;
+
+const tool = await connect(toolId);
+const response = await tool.chat({
+  messages: [
+    { role: "user", content: "Generate me a list of five healthy lunch ideas." }
+  ]
+});
+
+console.log(response?.message.content);
+```
+
+## Public API
+
+### configure(config)
+
+Sets process-level provider configuration. Values persist until called again.
+
+```ts
+import { configure } from "switchboard-ai-sdk";
+
+configure({
+  ollamaHost: "http://192.168.1.20:11434",
+  ollamaModel: "qwen3:14b",
+  codexModel: "gpt-5.5",
+  codexSandbox: "workspace-write",
+  claudeCodeModel: "claude-sonnet-4",
+  claudeCodeMaxTurns: 4,
+  opencodeModel: "openai/gpt-5.5"
+});
+```
+
+Config fields:
+- `ollamaHost`: Custom Ollama host URL (default: http://127.0.0.1:11434)
+- `ollamaModel`: Default model for Ollama chat calls
+- `codexModel`: Default model for Codex
+- `codexSandbox`: "read-only" | "workspace-write" | "danger-full-access"
+- `claudeCodeModel`: Default model for Claude Code
+- `claudeCodeMaxTurns`: Max prompt turns for Claude Code
+- `opencodeModel`: Default model for OpenCode
+
+### discover()
+
+Scans the local machine for installed AI tools.
+
+```ts
+import { discover } from "switchboard-ai-sdk";
+
+const tools = await discover();
+```
+
+Returns an array of DiscoveredTool:
+```ts
+type DiscoveredTool = {
+  id: "claude-code" | "codex" | "ollama" | "opencode";
+  name: string;
+  type: "agent" | "runtime" | "server" | "unknown";
+  available: boolean;
+  version?: string;
+  capabilities: string[];
+  models?: string[];
+  defaultModel?: string;
+  metadata?: Record<string, unknown>;
+};
+```
+
+### connect(providerId)
+
+Connects to a specific AI tool by provider ID.
+
+```ts
+import { connect } from "switchboard-ai-sdk";
+
+const tool = await connect("ollama");
+```
+
+Returns a ConnectedTool:
+```ts
+type ConnectedTool = {
+  id: "claude-code" | "codex" | "ollama" | "opencode";
+  name: string;
+  type: "agent" | "runtime" | "server" | "unknown";
+  capabilities: string[];
+  models?: string[];
+  defaultModel?: string;
+  health(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<boolean>;
+  checkAuth?(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<AuthCheckResult>;
+  startAuth?(options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<AuthStartResult>;
+  chat(input: ChatInput, options?: { signal?: AbortSignal; timeoutMs?: number }): Promise<ToolResult>;
+};
+```
+
+### tool.chat(input, options?)
+
+Sends a chat prompt to the connected tool.
+
+```ts
+const response = await tool.chat({
+  messages: [
+    { role: "system", content: "You are a helpful assistant." },
+    { role: "user", content: "What is 1+1?" }
+  ],
+  model: "optional-model-override"
+}, {
+  timeoutMs: 30000,
+  signal: abortController.signal
+});
+```
+
+ChatInput:
+```ts
+type ChatInput = {
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  model?: string;
+};
+```
+
+ToolResult:
+```ts
+type ToolResult = {
+  message: { role: "assistant"; content: string };
+  usage?: Record<string, number>;
+  metadata?: Record<string, unknown>;
+};
+```
+
+### tool.health(options?)
+
+Checks whether the provider is healthy and ready.
+
+```ts
+const healthy = await tool.health();
+```
+
+Returns `boolean`.
+
+### tool.checkAuth(options?)
+
+Inspects the current auth state of the provider.
+
+```ts
+const auth = await tool.checkAuth();
+```
+
+Returns:
+```ts
+type AuthCheckResult = {
+  authSupported: boolean;
+  authenticated: boolean | null;
+  authStatus: "authenticated" | "unauthenticated" | "not_supported" | "unknown";
+  reason?: string;
+  command?: string;
+  output?: string;
+};
+```
+
+### tool.startAuth(options?)
+
+Starts the authentication flow for the provider.
+
+```ts
+const result = await tool.startAuth();
+```
+
+Returns:
+```ts
+type AuthStartResult = {
+  status: "already_authenticated" | "started" | "unsupported" | "failed";
+  authenticated: boolean | null;
+  command: string;
+  message?: string;
+  instructions?: string;
+  output?: string;
+};
+```
+
+### startSwitchboardServer(options)
+
+Starts a local HTTP server exposing the SDK over HTTP.
+
+```ts
+import { startSwitchboardServer } from "switchboard-ai-sdk";
+
+const server = await startSwitchboardServer({ port: 3000 });
+console.log(server.url); // http://127.0.0.1:3000
+```
+
+HTTP Endpoints:
+- GET /config — Read current provider config
+- PUT /config — Replace provider config
+- GET /health — Aggregate health status of all tools
+- GET /health/:toolId — Health status of a specific tool
+- GET /discover — Discover available AI tools
+- POST /auth/:toolId — Start authentication for a provider
+- POST /chat/:toolId — Send a chat prompt to a provider
+
+### createSwitchboardServer(options)
+
+Creates but does not start the HTTP server.
+
+```ts
+import { createSwitchboardServer } from "switchboard-ai-sdk";
+
+const server = createSwitchboardServer({ port: 3000 });
+server.listen(3000, "127.0.0.1");
+```
+
+## Provider Details
+
+### Codex (agent type)
+
+CLI-backed AI coding tool from OpenAI. Supports chat, health checks, auth checks, and auth start. Configure with `codexModel` and `codexSandbox`.
+
+Sandbox modes:
+- `read-only` — Read files, cannot modify
+- `workspace-write` — Read/write within workspace
+- `danger-full-access` — Full filesystem access
+
+### Claude Code (agent type)
+
+Anthropic's CLI-based coding agent. Supports chat, health checks, auth checks, and auth start. Configure with `claudeCodeModel` and `claudeCodeMaxTurns`.
+
+### Ollama (runtime type)
+
+Local model runtime. Supports chat, health checks, and model listing. No auth required. Configure with `ollamaHost` and `ollamaModel`.
+
+Ollama is the only runtime-type provider — it serves models but does not autonomously act on the environment.
+
+### OpenCode (agent type)
+
+CLI-based coding tool with both free and paid hosted models. Supports chat, health checks, auth checks, auth start, and full model listing. Configure with `opencodeModel`.
+
+Free models (no subscription):
+- opencode/big-pickle
+- opencode/deepseek-v4-flash-free
+- opencode/mimo-v2.5-free
+- opencode/nemotron-3-ultra-free
+- opencode/north-mini-code-free
+
+OpenCode Go models (paid):
+- opencode-go/deepseek-v4-flash
+- opencode-go/deepseek-v4-pro
+- opencode-go/glm-5.1
+- opencode-go/glm-5.2
+- opencode-go/kimi-k2.6
+- opencode-go/kimi-k2.7-code
+- opencode-go/mimo-v2.5
+- opencode-go/mimo-v2.5-pro
+- opencode-go/minimax-m2.7
+- opencode-go/minimax-m3
+- opencode-go/qwen3.6-plus
+- opencode-go/qwen3.7-max
+- opencode-go/qwen3.7-plus
+
+OpenAI-backed models (bring your own key):
+- openai/gpt-5.3-codex-spark
+- openai/gpt-5.4
+- openai/gpt-5.4-fast
+- openai/gpt-5.4-mini
+- openai/gpt-5.4-mini-fast
+- openai/gpt-5.5
+- openai/gpt-5.5-fast
+- openai/gpt-5.5-pro
+
+## Model Discovery Behavior
+
+- **Ollama**: Returns all installed local models via HTTP API. Falls back to first discovered model if no default is configured.
+- **OpenCode**: Returns full model list from CLI. Supports model override via `opencodeModel` or `SWITCHBOARD_OPENCODE_MODEL`.
+- **Codex**: Mirrors configured model into models/defaultModel when explicitly set. Without configuration, models is undefined.
+- **Claude Code**: Same as Codex — mirrors configured model when set, otherwise undefined.
+
+## Error Handling
+
+### Direct SDK Errors (Typed)
+
+- `ToolNotFoundError` — Unknown or uninstalled provider ID
+- `ToolUnavailableError` — Provider installed but unreachable
+- `ToolAuthError` — Provider requires authentication
+- `ProviderExecutionError` — Provider failed to produce valid output
+- `TimeoutError` — Operation exceeded timeout
+
+```ts
+import { ToolAuthError, TimeoutError } from "switchboard-ai-sdk";
+
+try {
+  const result = await tool.chat(input, { timeoutMs: 30000 });
+} catch (err) {
+  if (err instanceof ToolAuthError) {
+    // Handle auth
+  } else if (err instanceof TimeoutError) {
+    // Handle timeout
+  }
+}
+```
+
+### HTTP Error Envelope
+
+```json
+{
+  "error": {
+    "code": "timeout",
+    "message": "Operation timed out after 30000ms."
+  }
+}
+```
+
+HTTP status → error code mapping:
+- 400 → invalid_request
+- 401 → tool_auth_required
+- 404 → tool_not_found
+- 502 → provider_execution_failed
+- 503 → tool_unavailable
+- 504 → timeout
+- 500 → internal_error
+
+## Environment Variables
+
+- `OLLAMA_HOST` → ollamaHost
+- `SWITCHBOARD_OLLAMA_MODEL` → ollamaModel
+- `SWITCHBOARD_CODEX_MODEL` → codexModel
+- `SWITCHBOARD_CODEX_SANDBOX` → codexSandbox
+- `SWITCHBOARD_CLAUDE_CODE_MODEL` → claudeCodeModel
+- `SWITCHBOARD_CLAUDE_CODE_MAX_TURNS` → claudeCodeMaxTurns
+- `SWITCHBOARD_OPENCODE_MODEL` → opencodeModel
+
+These serve as base defaults — `configure()` values take precedence.
+
+## Complete Usage Example
+
+```ts
+import { connect, discover, ToolAuthError, TimeoutError } from "switchboard-ai-sdk";
+
+async function askAI(prompt: string) {
+  const tools = await discover();
+  const available = tools.find(t => t.available && t.capabilities.includes("chat"));
+
+  if (!available) {
+    throw new Error("No AI tools available.");
+  }
+
+  const tool = await connect(available.id);
+
+  // Check auth for agent tools
+  if (tool.checkAuth) {
+    const auth = await tool.checkAuth();
+    if (auth.authStatus === "unauthenticated") {
+      const start = await tool.startAuth();
+      console.log(`Run: ${start.command}`);
+      return null;
+    }
+  }
+
+  if (!(await tool.health())) {
+    throw new Error(`${tool.name} is not healthy.`);
+  }
+
+  try {
+    const result = await tool.chat(
+      { messages: [{ role: "user", content: prompt }] },
+      { timeoutMs: 30000 }
+    );
+    return result.message.content;
+  } catch (err) {
+    if (err instanceof ToolAuthError) {
+      console.log("Auth error — please authenticate first.");
+    } else if (err instanceof TimeoutError) {
+      console.log("Request timed out.");
+    }
+    return null;
+  }
+}
+```
+
+## License
+
+MIT. See https://github.com/MauriceHeinze/switchboard-ai-sdk/blob/main/LICENSE
+
+## Links
+
+- Docs site: https://mauriceheinze.github.io/switchboard-ai-sdk/
+- GitHub: https://github.com/MauriceHeinze/switchboard-ai-sdk
+- npm: https://www.npmjs.com/package/switchboard-ai-sdk
